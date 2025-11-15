@@ -1,38 +1,38 @@
 .race-stats {
-  background: rgba(15, 15, 15, 0.95);
-  border: 1px solid rgba(225, 6, 0, 0.3);
+  background: #000000;
+  border: 1px solid rgba(225, 6, 0, 0.4);
   border-left: 4px solid #E10600;
-  padding: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  padding: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
 }
 
 .stats-header {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 900;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid rgba(225, 6, 0, 0.3);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid rgba(225, 6, 0, 0.4);
   color: #E10600;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
-  text-shadow: 0 0 10px rgba(225, 6, 0, 0.5);
+  letter-spacing: 1px;
+  text-shadow: 0 0 8px rgba(225, 6, 0, 0.6);
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 15px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .stat-card {
-  background: rgba(15, 15, 15, 0.6);
-  padding: 16px;
-  border: 1px solid rgba(225, 6, 0, 0.2);
+  background: rgba(0, 0, 0, 0.6);
+  padding: 10px;
+  border: 1px solid rgba(225, 6, 0, 0.3);
   border-left: 3px solid transparent;
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -72,25 +72,25 @@
 }
 
 .top-three {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(139, 0, 0, 0.2);
 }
 
 .top-three h4 {
-  font-size: 16px;
-  margin-bottom: 15px;
+  font-size: 12px;
+  margin-bottom: 8px;
   color: #a0a0a0;
 }
 
 .top-three-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  margin-bottom: 10px;
-  background: rgba(10, 14, 39, 0.5);
-  border-radius: 8px;
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 6px;
   border-left: 4px solid;
 }
 

@@ -1,41 +1,41 @@
 .weather-panel {
-  background: rgba(15, 15, 15, 0.95);
-  border: 1px solid rgba(225, 6, 0, 0.3);
+  background: #000000;
+  border: 1px solid rgba(225, 6, 0, 0.4);
   border-left: 4px solid #E10600;
-  padding: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  padding: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
   position: relative;
   overflow: hidden;
 }
 
 .weather-section h3,
 .tyre-section h3 {
-  margin: 0 0 16px 0;
+  margin: 0 0 8px 0;
   color: #E10600;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
-  text-shadow: 0 0 10px rgba(225, 6, 0, 0.5);
+  letter-spacing: 1px;
+  text-shadow: 0 0 8px rgba(225, 6, 0, 0.6);
 }
 
 .weather-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 8px;
 }
 
 .weather-item {
-  background: rgba(15, 15, 15, 0.6);
-  padding: 16px;
-  border: 1px solid rgba(225, 6, 0, 0.2);
+  background: rgba(0, 0, 0, 0.6);
+  padding: 10px;
+  border: 1px solid rgba(225, 6, 0, 0.3);
   border-left: 3px solid transparent;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   transition: all 0.2s ease;
 }
 
@@ -101,26 +101,26 @@
 .tyre-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 8px;
 }
 
 .tyre-item {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 16px;
-  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 10px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   transition: all 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(225, 6, 0, 0.3);
   position: relative;
 }
 
 .tyre-item:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(139, 0, 0, 0.2);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(225, 6, 0, 0.3);
 }
 
 .tyre-item.recommended {
@@ -169,14 +169,14 @@
 }
 
 .tyre-recommendation {
-  margin-top: 15px;
-  padding: 14px;
-  background: rgba(225, 6, 0, 0.15);
+  margin-top: 8px;
+  padding: 10px;
+  background: rgba(139, 0, 0, 0.2);
   border: 1px solid rgba(225, 6, 0, 0.4);
   border-left: 4px solid #E10600;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .recommendation-label {
