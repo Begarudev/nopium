@@ -1,21 +1,18 @@
 .race-stats {
-  background: #000000;
-  border: 1px solid rgba(225, 6, 0, 0.4);
-  border-left: 4px solid #E10600;
-  padding: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  background: var(--bg-card);
+  border-left: 3px solid var(--accent-primary);
+  padding: 16px;
 }
 
 .stats-header {
-  font-size: 14px;
-  font-weight: 900;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid rgba(225, 6, 0, 0.4);
-  color: #E10600;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
   text-transform: uppercase;
-  letter-spacing: 1px;
-  text-shadow: 0 0 8px rgba(225, 6, 0, 0.6);
+  letter-spacing: 2px;
 }
 
 .stats-grid {
@@ -26,27 +23,24 @@
 }
 
 .stat-card {
-  background: rgba(0, 0, 0, 0.6);
-  padding: 10px;
-  border: 1px solid rgba(225, 6, 0, 0.3);
-  border-left: 3px solid transparent;
+  background: var(--surface);
+  padding: 12px;
+  border-left: 2px solid transparent;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .stat-card:hover {
-  background: rgba(225, 6, 0, 0.1);
-  border-left-color: #E10600;
-  box-shadow: 0 0 15px rgba(225, 6, 0, 0.2);
+  background: var(--bg-secondary);
+  border-left-color: var(--accent-primary);
 }
 
 .stat-icon {
-  color: #E10600;
+  color: var(--accent-primary);
   flex-shrink: 0;
-  filter: drop-shadow(0 0 5px rgba(225, 6, 0, 0.5));
 }
 
 .stat-content {
@@ -54,15 +48,17 @@
 }
 
 .stat-label {
-  font-size: 12px;
-  color: #a0a0a0;
-  margin-bottom: 5px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .stat-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .stat-subvalue {
@@ -72,26 +68,27 @@
 }
 
 .top-three {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(139, 0, 0, 0.2);
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
 }
 
 .top-three h4 {
-  font-size: 12px;
-  margin-bottom: 8px;
-  color: #a0a0a0;
+  font-size: 11px;
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .top-three-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
-  margin-bottom: 6px;
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: 6px;
-  border-left: 4px solid;
+  gap: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+  background: var(--surface);
+  border-left: 3px solid;
 }
 
 .top-three-item.podium-1 {
@@ -110,9 +107,9 @@
 }
 
 .podium-position {
-  font-size: 20px;
-  font-weight: 800;
-  width: 30px;
+  font-size: 18px;
+  font-weight: 700;
+  width: 28px;
   text-align: center;
 }
 
@@ -125,10 +122,11 @@
 .podium-name {
   flex: 1;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 .podium-time {
-  font-size: 12px;
-  color: #a0a0a0;
+  font-size: 11px;
+  color: var(--text-secondary);
 }
 

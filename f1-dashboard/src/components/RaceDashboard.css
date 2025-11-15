@@ -1,8 +1,8 @@
 .race-dashboard {
   min-height: 100vh;
-  background: #000000;
+  background: var(--bg-primary);
   padding: 20px;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .race-dashboard-header {
@@ -10,11 +10,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 24px;
-  background: linear-gradient(180deg, rgba(139, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.5) 100%);
-  border: 2px solid #E10600;
-  border-radius: 8px;
+  background: var(--bg-card);
+  border-left: 3px solid var(--accent-primary);
   margin-bottom: 24px;
-  box-shadow: 0 0 30px rgba(225, 6, 0, 0.3);
 }
 
 .dashboard-title-section {
@@ -24,23 +22,22 @@
 }
 
 .dashboard-trophy-icon {
-  color: #E10600;
-  filter: drop-shadow(0 0 10px rgba(225, 6, 0, 0.8));
+  color: var(--accent-primary);
 }
 
 .dashboard-title-section h1 {
   margin: 0;
-  color: #E10600;
-  font-size: 32px;
-  font-weight: 900;
+  color: var(--text-primary);
+  font-size: 28px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 2px;
 }
 
 .dashboard-subtitle {
-  margin: 4px 0 0 0;
-  color: #B8B8B8;
-  font-size: 14px;
+  margin: 6px 0 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -67,30 +64,23 @@
 }
 
 .back-button {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border: 1px solid rgba(225, 6, 0, 0.5);
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
 .back-button:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: #E10600;
-  box-shadow: 0 0 15px rgba(225, 6, 0, 0.3);
+  background: var(--bg-secondary);
+  border-color: var(--accent-primary);
 }
 
 .reset-button {
-  background: #E10600;
+  background: var(--accent-primary);
   color: #fff;
 }
 
 .reset-button:hover {
   background: #ff1a1a;
-  box-shadow: 0 0 15px rgba(225, 6, 0, 0.5);
-  transform: translateY(-2px);
-}
-
-.reset-button:active {
-  transform: translateY(0);
 }
 
 .race-dashboard-content {
@@ -100,11 +90,9 @@
 }
 
 .dashboard-section {
-  background: rgba(10, 10, 10, 0.8);
-  border: 2px solid rgba(225, 6, 0, 0.4);
-  border-radius: 8px;
+  background: var(--bg-card);
+  border-left: 3px solid var(--accent-primary);
   padding: 24px;
-  box-shadow: 0 0 20px rgba(225, 6, 0, 0.2);
 }
 
 .section-header {
@@ -113,20 +101,20 @@
   gap: 12px;
   margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 2px solid rgba(225, 6, 0, 0.4);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .section-header svg {
-  color: #E10600;
+  color: var(--accent-primary);
 }
 
 .section-header h2 {
   margin: 0;
-  color: #E10600;
-  font-size: 24px;
-  font-weight: 900;
+  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
 }
 
 /* Undercut Section */

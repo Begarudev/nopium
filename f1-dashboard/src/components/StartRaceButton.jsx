@@ -52,7 +52,7 @@ const StartRaceButton = ({ onStart, disabled = false, raceStarted = false, raceF
     <button
       className={getButtonClass()}
       onClick={onStart}
-      disabled={disabled || loading || (raceStarted && !raceFinished)}
+      disabled={disabled || loading}
       type="button"
     >
       {getButtonContent()}

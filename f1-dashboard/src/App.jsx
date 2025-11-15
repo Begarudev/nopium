@@ -116,8 +116,31 @@ function App() {
   };
 
   const handleStartRace = async () => {
+    // If race is in progress, pause it
     if (raceStarted && !raceState.race_finished) {
-      return; // Race already started
+      setLoading(true);
+      try {
+        const response = await fetch('http://localhost:8000/api/pause', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to pause race');
+        }
+
+        const data = await response.json();
+        setRaceStarted(false);
+        console.log('Race paused:', data);
+      } catch (error) {
+        console.error('Error pausing race:', error);
+        alert('Failed to pause race. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+      return;
     }
 
     // If race finished, reset first
@@ -229,10 +252,10 @@ function App() {
           <div className="start-button-container">
             <StartRaceButton
               onStart={handleStartRace}
-              disabled={true}
+              disabled={!isConnected || loading}
               raceStarted={raceStarted}
               raceFinished={false}
-              loading={false}
+              loading={loading}
             />
           </div>
         </div>

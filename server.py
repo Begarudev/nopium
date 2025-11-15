@@ -533,6 +533,10 @@ class RaceSim:
         """Start the race - allows simulation to proceed"""
         self.race_started = True
     
+    def pause_race(self):
+        """Pause the race - stops simulation from proceeding"""
+        self.race_started = False
+    
     def step(self):
         # Only advance simulation if race has started
         if not self.race_started:
@@ -1245,6 +1249,20 @@ async def start_race(request: StartRaceRequest):
     else:
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail="Simulation not initialized")
+
+@app.post("/api/pause")
+async def pause_race():
+    """Pause the race"""
+    global sim
+    if sim is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail="Simulation not initialized")
+    
+    sim.pause_race()
+    return {
+        "message": "Race paused",
+        "race_started": False
+    }
 
 @app.get("/api/race-status")
 async def get_race_status():

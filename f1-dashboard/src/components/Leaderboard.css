@@ -1,58 +1,42 @@
 .leaderboard {
-  background: #000000;
-  border: 1px solid rgba(225, 6, 0, 0.4);
-  border-left: 4px solid #E10600;
+  background: var(--bg-card);
+  border-left: 3px solid var(--accent-primary);
   padding: 0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
   height: 100%;
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden;
-}
-
-.leaderboard::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #E10600 50%, transparent);
 }
 
 .leaderboard-header {
   margin-bottom: 0;
-  padding: 12px 12px 8px 12px;
-  background: linear-gradient(180deg, rgba(139, 0, 0, 0.3) 0%, transparent 100%);
-  border-bottom: 2px solid rgba(225, 6, 0, 0.4);
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .leaderboard-header h2 {
-  margin: 0 0 6px 0;
-  color: #FFFFFF;
+  margin: 0 0 8px 0;
+  color: var(--text-primary);
   font-size: 16px;
-  font-weight: 900;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  text-shadow: 0 0 8px rgba(225, 6, 0, 0.6);
+  letter-spacing: 2px;
 }
 
 .race-info {
   display: flex;
-  gap: 16px;
-  font-size: 13px;
-  color: #B8B8B8;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .race-time, .lap-counter {
-  background: rgba(225, 6, 0, 0.15);
+  background: var(--surface);
   padding: 6px 12px;
-  border: 1px solid rgba(225, 6, 0, 0.4);
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #FFFFFF;
+  color: var(--text-primary);
 }
 
 .leaderboard-table {
@@ -63,36 +47,33 @@
 .table-header {
   display: grid;
   grid-template-columns: 50px 1.5fr 70px 90px 80px 90px 80px 70px 60px;
-  gap: 6px;
-  padding: 8px 10px;
-  background: linear-gradient(180deg, rgba(139, 0, 0, 0.3) 0%, rgba(139, 0, 0, 0.15) 100%);
-  font-weight: 900;
-  color: #FFFFFF;
-  font-size: 9px;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface);
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  border-bottom: 2px solid #E10600;
-  border-top: 1px solid rgba(225, 6, 0, 0.4);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .table-row {
   display: grid;
   grid-template-columns: 50px 1.5fr 70px 90px 80px 90px 80px 70px 60px;
-  gap: 6px;
-  padding: 8px 10px;
-  background: rgba(0, 0, 0, 0.6);
-  margin-bottom: 1px;
-  border-left: 3px solid transparent;
-  transition: all 0.2s ease;
+  gap: 8px;
+  padding: 10px 12px;
+  background: transparent;
+  border-left: 2px solid transparent;
+  transition: all 0.15s ease;
   align-items: center;
   cursor: pointer;
-  border-bottom: 1px solid rgba(139, 0, 0, 0.1);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .table-row:hover {
-  background: rgba(225, 6, 0, 0.1);
-  border-left-color: #E10600;
-  transform: translateX(2px);
+  background: var(--surface);
+  border-left-color: var(--accent-primary);
 }
 
 .table-row.in-pit {
@@ -101,46 +82,39 @@
 }
 
 .table-row.podium-gold {
-  background: linear-gradient(90deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
-  border-left: 4px solid #FFD700;
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+  background: rgba(255, 215, 0, 0.1);
+  border-left: 3px solid #FFD700;
 }
 
 .table-row.podium-silver {
-  background: linear-gradient(90deg, rgba(192, 192, 192, 0.15) 0%, rgba(192, 192, 192, 0.05) 100%);
-  border-left: 4px solid #C0C0C0;
-  box-shadow: 0 0 15px rgba(192, 192, 192, 0.3);
+  background: rgba(192, 192, 192, 0.1);
+  border-left: 3px solid #C0C0C0;
 }
 
 .table-row.podium-bronze {
-  background: linear-gradient(90deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.05) 100%);
-  border-left: 4px solid #CD7F32;
-  box-shadow: 0 0 15px rgba(205, 127, 50, 0.3);
+  background: rgba(205, 127, 50, 0.1);
+  border-left: 3px solid #CD7F32;
 }
 
 .position-badge {
-  background: linear-gradient(135deg, #E10600 0%, #B80500 100%);
+  background: var(--accent-primary);
   color: white;
-  padding: 8px;
+  padding: 6px;
   text-align: center;
-  font-weight: 900;
-  font-size: 18px;
-  position: relative;
-  box-shadow: 0 0 15px rgba(225, 6, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  font-weight: 700;
+  font-size: 16px;
 }
 
 .position-up {
-  color: #E10600;
-  font-size: 12px;
+  color: #00FF00;
+  font-size: 11px;
   margin-left: 2px;
-  font-weight: 900;
+  font-weight: 600;
 }
 
 .position-down {
-  color: #ff4444;
-  font-size: 12px;
+  color: #FF4444;
+  font-size: 11px;
   margin-left: 2px;
 }
 
@@ -153,11 +127,10 @@
 }
 
 .driver-color {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 0 8px currentColor;
+  border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .driver-name {
@@ -223,18 +196,16 @@
 
 .gear-badge,
 .pitstop-badge {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  font-weight: 900;
-  background: rgba(225, 6, 0, 0.2);
-  color: #E10600;
-  border: 2px solid rgba(225, 6, 0, 0.5);
-  box-shadow: 0 0 10px rgba(225, 6, 0, 0.3);
-  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
 .col-tyre {
@@ -246,11 +217,10 @@
 }
 
 .tyre-indicator {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 0 8px currentColor;
+  border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .tyre-text {
@@ -349,24 +319,24 @@
 
 .show-more-leaderboard {
   width: 100%;
-  padding: 8px;
+  padding: 10px;
   margin-top: 8px;
-  background: rgba(139, 0, 0, 0.2);
-  border: 1px solid rgba(225, 6, 0, 0.4);
-  color: #E10600;
+  background: var(--surface);
+  border: none;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-secondary);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .show-more-leaderboard:hover {
-  background: rgba(139, 0, 0, 0.3);
-  border-color: #E10600;
-  box-shadow: 0 0 10px rgba(225, 6, 0, 0.3);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
