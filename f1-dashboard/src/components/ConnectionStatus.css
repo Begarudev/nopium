@@ -1,0 +1,92 @@
+.connection-status {
+  margin-bottom: 20px;
+}
+
+.status-bar {
+  background: linear-gradient(135deg, #1a1f3a 0%, #2a2f4a 100%);
+  border-radius: 12px;
+  padding: 16px 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.status-dot.connected {
+  background: #44ff44;
+  box-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
+}
+
+.status-dot.disconnected {
+  background: #ff4444;
+  box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+  animation: none;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-text {
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.error-message {
+  color: #ff8888;
+  background: rgba(255, 68, 68, 0.1);
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.reset-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.reset-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.reset-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.reset-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #555;
+}

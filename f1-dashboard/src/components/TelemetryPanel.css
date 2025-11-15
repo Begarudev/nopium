@@ -1,0 +1,144 @@
+.telemetry-panel {
+  background: rgba(26, 31, 58, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.telemetry-placeholder {
+  text-align: center;
+  padding: 40px;
+  color: #a0a0a0;
+}
+
+.telemetry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.telemetry-header h3 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.car-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.gauges-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.gauge-container {
+  background: rgba(10, 14, 39, 0.5);
+  border-radius: 12px;
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.gauge-label {
+  font-size: 12px;
+  color: #a0a0a0;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.gauge-wrapper {
+  position: relative;
+}
+
+.gauge-value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.gauge-unit {
+  text-align: center;
+  font-size: 10px;
+  color: #a0a0a0;
+  margin-top: 5px;
+}
+
+.gear-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+}
+
+.gear-number {
+  font-size: 48px;
+  font-weight: 800;
+  color: #667eea;
+}
+
+.charts-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.chart-container {
+  background: rgba(10, 14, 39, 0.5);
+  border-radius: 12px;
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chart-title {
+  font-size: 14px;
+  color: #a0a0a0;
+  margin-bottom: 10px;
+}
+
+.status-row {
+  display: flex;
+  gap: 20px;
+  justify-content: space-around;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.status-label {
+  font-size: 11px;
+  color: #a0a0a0;
+}
+
+.status-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.status-value.active {
+  color: #00ff88;
+}
+
+.status-value.inactive {
+  color: #666;
+}
+

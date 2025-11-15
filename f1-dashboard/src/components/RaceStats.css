@@ -1,0 +1,129 @@
+.race-stats {
+  background: rgba(26, 31, 58, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.stats-header {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: rgba(10, 14, 39, 0.5);
+  border-radius: 12px;
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  background: rgba(10, 14, 39, 0.7);
+  border-color: rgba(102, 126, 234, 0.5);
+}
+
+.stat-icon {
+  color: #667eea;
+  flex-shrink: 0;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #a0a0a0;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.stat-subvalue {
+  font-size: 11px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.top-three {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.top-three h4 {
+  font-size: 16px;
+  margin-bottom: 15px;
+  color: #a0a0a0;
+}
+
+.top-three-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: rgba(10, 14, 39, 0.5);
+  border-radius: 8px;
+  border-left: 4px solid;
+}
+
+.top-three-item.podium-1 {
+  border-left-color: #ffd700;
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.top-three-item.podium-2 {
+  border-left-color: #c0c0c0;
+  background: rgba(192, 192, 192, 0.1);
+}
+
+.top-three-item.podium-3 {
+  border-left-color: #cd7f32;
+  background: rgba(205, 127, 50, 0.1);
+}
+
+.podium-position {
+  font-size: 20px;
+  font-weight: 800;
+  width: 30px;
+  text-align: center;
+}
+
+.podium-color {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.podium-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.podium-time {
+  font-size: 12px;
+  color: #a0a0a0;
+}
+
