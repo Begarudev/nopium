@@ -1,0 +1,167 @@
+.filter-bar {
+  background: rgba(0, 0, 0, 0.8);
+  border-bottom: 1px solid rgba(225, 6, 0, 0.4);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.strategy-recommendation {
+  margin-left: auto;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 11px;
+  color: #a0a0a0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.weather-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-value {
+  font-size: 12px;
+  color: #fff;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.filter-separator {
+  color: rgba(225, 6, 0, 0.4);
+  font-size: 12px;
+  margin: 0 4px;
+}
+
+.tyre-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tyre-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(225, 6, 0, 0.3);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.tyre-filter-item:hover {
+  background: rgba(225, 6, 0, 0.1);
+  border-color: rgba(225, 6, 0, 0.6);
+}
+
+.tyre-filter-item.recommended {
+  border: 2px solid #E10600;
+  background: rgba(225, 6, 0, 0.25);
+  box-shadow: 0 0 12px rgba(225, 6, 0, 0.5);
+  padding: 6px 10px;
+  position: relative;
+}
+
+.tyre-indicator-small {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
+.tyre-filter-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.tyre-filter-count {
+  font-size: 10px;
+  color: #a0a0a0;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.tyre-indicator-small.recommended-indicator {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #E10600;
+  box-shadow: 0 0 8px rgba(225, 6, 0, 0.6);
+}
+
+.tyre-filter-name.recommended-name {
+  font-weight: 700;
+  color: #E10600;
+  text-shadow: 0 0 8px rgba(225, 6, 0, 0.5);
+}
+
+.recommended-badge {
+  font-size: 9px;
+  color: #E10600;
+  background: rgba(225, 6, 0, 0.2);
+  padding: 2px 6px;
+  border: 1px solid #E10600;
+  border-radius: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 4px;
+  box-shadow: 0 0 6px rgba(225, 6, 0, 0.4);
+}
+
+.strategy-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(225, 6, 0, 0.4);
+  border-left: 3px solid #E10600;
+  border-radius: 4px;
+}
+
+.strategy-tyre-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 8px currentColor;
+  flex-shrink: 0;
+}
+
+.strategy-value {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.strategy-label {
+  font-size: 10px;
+  color: #a0a0a0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+

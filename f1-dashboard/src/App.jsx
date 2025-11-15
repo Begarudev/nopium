@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { useRaceData } from './hooks/useRaceData';
 import TrackView from './components/TrackView';
 import Leaderboard from './components/Leaderboard';
-import WeatherPanel from './components/WeatherPanel';
 import TelemetryPanel from './components/TelemetryPanel';
 import RaceStats from './components/RaceStats';
 import RaceLog from './components/RaceLog';
 import PitLog from './components/PitLog';
 import CarDetails from './components/CarDetails';
 import ConnectionStatus from './components/ConnectionStatus';
+import FilterBar from './components/FilterBar';
 import './App.css';
 
 const WS_URL = 'ws://localhost:8000/ws';
@@ -50,6 +50,11 @@ function App() {
         isConnected={isConnected} 
         error={error}
         onReset={resetRace}
+      />
+
+      <FilterBar
+        weather={raceState.weather || { rain: 0, track_temp: 25, wind: 0 }}
+        tyreDistribution={raceState.tyre_distribution || {}}
       />
 
       <div className="dashboard-grid">
@@ -98,13 +103,6 @@ function App() {
             <RaceStats 
               cars={raceState.cars || []}
               raceTime={raceState.time || 0}
-            />
-          </div>
-
-          <div className="weather-section">
-            <WeatherPanel 
-              weather={raceState.weather || { rain: 0, track_temp: 25, wind: 0 }}
-              tyreDistribution={raceState.tyre_distribution || {}}
             />
           </div>
 
