@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gauge, Zap, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
-import { positionChange, checkeredFlag, drsPulse, overtakingBadge, lapCounterFlip, speedLines } from '../utils/animations';
+import { positionChange, drsPulse, overtakingBadge, lapCounterFlip } from '../utils/animations';
 import './Leaderboard.css';
 
 const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) => {
@@ -14,6 +14,8 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
   const lapCounterRef = useRef(null);
   const prevLapRef = useRef(0);
   const leaderboardRef = useRef(null);
+  const animationTimeoutRef = useRef(null);
+  const pendingAnimationsRef = useRef(new Map());
 
   useEffect(() => {
     if (!cars || cars.length === 0) {
@@ -25,40 +27,60 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
     // Detect position changes for animations
     const oldPositions = { ...prevPositions };
     const newPositions = {};
+    const positionChanges = [];
+    
     newSorted.forEach(car => {
       newPositions[car.name] = car.position;
       
-      // Animate position changes
+      // Collect position changes instead of animating immediately
       if (oldPositions[car.name] && oldPositions[car.name] !== car.position) {
-        const rowElement = rowRefs.current[car.name];
-        if (rowElement) {
-          const direction = oldPositions[car.name] > car.position ? 'up' : 'down';
-          positionChange(rowElement, direction, { duration: 600, intensity: 1 });
-          
-          // Speed lines for position changes
-          speedLines(rowElement, { 
-            duration: 800, 
-            direction: 'horizontal',
-            intensity: 0.8,
-            color: car.color || '#E10600'
-          });
-        }
-      }
-      
-      // Checkered flag for podium positions
-      if (car.position <= 3 && oldPositions[car.name] && oldPositions[car.name] > 3) {
-        const rowElement = rowRefs.current[car.name];
-        if (rowElement) {
-          checkeredFlag(rowElement, { 
-            duration: 1000,
-            size: 10,
-            colors: ['#FFD700', '#000000']
-          });
-        }
+        positionChanges.push({
+          carName: car.name,
+          oldPosition: oldPositions[car.name],
+          newPosition: car.position,
+          direction: oldPositions[car.name] > car.position ? 'up' : 'down'
+        });
       }
     });
+    
+    // Update positions and sorted cars immediately for layout animation
     setPrevPositions(newPositions);
     setSortedCars(newSorted);
+    
+    // Throttle position change animations to prevent vibration
+    if (positionChanges.length > 0) {
+      // Clear any pending timeout
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+      }
+      
+      // Store pending animations (overwrite if same car changes again)
+      positionChanges.forEach(change => {
+        pendingAnimationsRef.current.set(change.carName, change);
+      });
+      
+      // Debounce: wait 200ms before animating to batch rapid changes
+      // This prevents vibration when positions change rapidly
+      animationTimeoutRef.current = setTimeout(() => {
+        // Only animate the final position change for each car
+        pendingAnimationsRef.current.forEach((change, carName) => {
+          const rowElement = rowRefs.current[carName];
+          if (rowElement) {
+            // Use the latest direction based on final position
+            const finalDirection = change.oldPosition > change.newPosition ? 'up' : 'down';
+            positionChange(rowElement, finalDirection, { duration: 500, intensity: 0.6 });
+          }
+        });
+        pendingAnimationsRef.current.clear();
+      }, 200);
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+      }
+    };
   }, [cars]);
 
   // Animate DRS indicators
@@ -182,8 +204,18 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
                 ref={(el) => { if (el) rowRefs.current[car.name] = el; }}
                 initial={{ opacity: 0, x: positionChange > 0 ? -50 : positionChange < 0 ? 50 : 0 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
+                exit={{ opacity: 0, transition: { duration: 0.2 } }}
+                transition={{ 
+                  opacity: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
+                  x: { duration: 0.4, ease: [0.4, 0, 0.2, 1] },
+                  delay: index * 0.03,
+                  layout: { 
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30,
+                    mass: 0.8
+                  }
+                }}
                 layout
                 className={`table-row ${car.on_pit ? 'in-pit' : ''} ${getPodiumClass(car.position)}`}
                 style={{ borderLeft: `4px solid ${car.color}` }}
@@ -191,8 +223,13 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
               >
                 <motion.span 
                   className="col-pos position-badge"
-                  animate={{ scale: positionChange !== 0 ? 1.2 : 1 }}
-                  transition={{ duration: 0.3 }}
+                  animate={{ scale: positionChange !== 0 ? 1.15 : 1 }}
+                  transition={{ 
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 25,
+                    mass: 0.6
+                  }}
                 >
                   {car.position}
                   {positionChange > 0 && <span className="position-up">↑</span>}

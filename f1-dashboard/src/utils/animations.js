@@ -243,15 +243,15 @@ export const positionChange = (element, direction, options = {}) => {
 
   return anime({
     targets: element,
-    translateY: [0, translateY, 0],
-    opacity: [1, 0.7, 1],
-    scale: [1, 1.1, 1],
+    translateY: [0, translateY * 0.7, 0],
+    opacity: [1, 0.9, 1],
+    scale: [1, 1.02, 1],
     duration: duration,
-    easing: 'easeOutElastic(1, .8)',
+    easing: 'easeOutCubic',
     filter: [
       { value: 'blur(0px)', duration: 0 },
-      { value: `blur(${5 * intensity}px)`, duration: duration * 0.3 },
-      { value: 'blur(0px)', duration: duration * 0.7 }
+      { value: `blur(${2 * intensity}px)`, duration: duration * 0.15 },
+      { value: 'blur(0px)', duration: duration * 0.85 }
     ]
   });
 };
