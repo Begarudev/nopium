@@ -416,7 +416,13 @@ class RaceSim:
         - Allow stretching to 90% wear if gap behind (>3s) OR fast approaching car (<2s)
         - Force pitstop at 90%+ wear regardless of conditions
         - Analyze interval patterns to time pitstops ending in gaps
+        - Prevent pitstops when less than 3 laps remaining
         """
+        # Check if race is almost over - no pitstops if less than 3 laps remaining
+        laps_remaining = self.total_laps - car.laps_completed
+        if laps_remaining < 3:
+            return 0.0
+        
         if car.wear < 0.8:
             return 0.0
         
@@ -540,14 +546,21 @@ class RaceSim:
                 if car.pit_counter <= 0:
                     car.on_pit = False
                     car.pit_counter = 0
-                    # Select tyre based on weather (will be implemented later)
+                    # Select tyre based on weather and laps remaining
                     rain = self.weather.get('rain', 0.0)
+                    laps_remaining = self.total_laps - car.laps_completed
                     if rain > 0.6:
                         car.tyre = 'WET'
                     elif rain > 0.3:
                         car.tyre = 'INTERMEDIATE'
                     else:
-                        car.tyre = random.choice(['SOFT', 'MEDIUM', 'HARD'])
+                        # Prefer softer compounds when race is ending soon
+                        if laps_remaining < 5:
+                            car.tyre = 'SOFT'  # Push for fastest lap times
+                        elif laps_remaining < 10:
+                            car.tyre = random.choice(['SOFT', 'MEDIUM'])  # Prefer softer
+                        else:
+                            car.tyre = random.choice(['SOFT', 'MEDIUM', 'HARD'])
                     # Update pitstop history with new tyre
                     if car.pitstop_history:
                         car.pitstop_history[-1]['new_tyre'] = car.tyre
@@ -606,6 +619,38 @@ class RaceSim:
                     if 0 < time_gap_ahead <= 1.0 and 0 < time_gap_leader <= 1.0:
                         car.drs_active = True
             
+            # Apply defensive behavior: slower cars hold up faster ones
+            defensive_speed_multiplier = 1.0
+            if not car.on_pit:
+                # Use sorted leaderboard to find car directly behind
+                car_position = next((i for i, c in enumerate(sorted_cars) if c == car), -1)
+                if car_position < len(sorted_cars) - 1:
+                    # There's a car behind
+                    car_behind = sorted_cars[car_position + 1]
+                    if not car_behind.on_pit:
+                        track_length = self.track['total_length']
+                        
+                        # Calculate distance gap (car ahead - car behind)
+                        lap_diff = car.laps_completed - car_behind.laps_completed
+                        distance_gap = (lap_diff * track_length) + (car.s - car_behind.s)
+                        
+                        # Normalize to handle lap wrapping
+                        if distance_gap < 0:
+                            distance_gap += track_length
+                        if distance_gap > track_length / 2:
+                            distance_gap = track_length - distance_gap
+                        
+                        # Calculate time gap (how long until car_behind reaches car's position)
+                        if car.v > 0.1 and distance_gap > 0:
+                            time_gap = distance_gap / car.v
+                            
+                            # If car behind is within 0.5-2 seconds and on a straight/low-curvature section
+                            if 0.5 <= time_gap <= 2.0 and curv < 0.001:  # Only on straights
+                                # Apply speed reduction: closer = more effect (2-5% max)
+                                # Scale from 0.98 (at 2s gap) to 0.95 (at 0.5s gap)
+                                reduction_factor = 0.98 - (0.03 * (2.0 - time_gap) / 1.5)
+                                defensive_speed_multiplier = min(defensive_speed_multiplier, reduction_factor)
+            
             # Lookahead to anticipate upcoming corners
             lookahead_distance = car.v * 2.0  # Look 2 seconds ahead
             u_ahead = self.track['s_to_u'](car.s + lookahead_distance)
@@ -614,6 +659,9 @@ class RaceSim:
             v_corner = self.cornering_speed(car, curv)
             v_corner_ahead = self.cornering_speed(car, curv_ahead)
             v_straight = self.straight_speed(car)  # This now includes DRS boost if active
+            
+            # Apply defensive speed multiplier
+            v_straight *= defensive_speed_multiplier
             
             # Use the more restrictive speed limit (current corner or upcoming corner)
             target_v = min(v_straight, v_corner, v_corner_ahead)
@@ -742,6 +790,19 @@ class RaceSim:
                 # Check if race is complete (72 laps)
                 if car.laps_completed >= self.total_laps:
                     self.race_finished = True
+
+        # Calculate intervals after all cars have moved
+        sorted_cars = self.get_leaderboard()
+        leader = sorted_cars[0] if sorted_cars else None
+        if leader:
+            track_length = self.track['total_length']
+            for car in sorted_cars:
+                # Time interval
+                car.time_interval = car.total_time - leader.total_time
+                # Distance interval (accounting for lap differences)
+                lap_diff = car.laps_completed - leader.laps_completed
+                distance_interval = (lap_diff * track_length) + (car.s - leader.s)
+                car.distance_interval = distance_interval
 
         self.time += self.dt
 
