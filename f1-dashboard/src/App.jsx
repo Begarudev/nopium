@@ -225,6 +225,8 @@ function App() {
             <RaceLog 
               cars={raceState.cars || []}
               raceTime={raceState.time || 0}
+              raceFinished={raceState.race_finished || false}
+              undercutSummary={raceState.undercut_summary || []}
             />
           </div>
 

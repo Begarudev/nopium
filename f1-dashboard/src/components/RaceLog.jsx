@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Zap, Wrench } from 'lucide-react';
+import { TrendingUp, Zap, Wrench, Award } from 'lucide-react';
 import { speedStreak } from '../utils/animations';
 import './RaceLog.css';
 
-const RaceLog = ({ cars = [], raceTime = 0 }) => {
+const RaceLog = ({ cars = [], raceTime = 0, raceFinished = false, undercutSummary = [] }) => {
   const [events, setEvents] = useState([]);
   const [prevState, setPrevState] = useState({
     positions: {},
@@ -178,6 +178,42 @@ const RaceLog = ({ cars = [], raceTime = 0 }) => {
           )}
         </AnimatePresence>
       </div>
+      
+      {/* Undercut Summary at End of Race */}
+      {raceFinished && undercutSummary && undercutSummary.length > 0 && (
+        <div className="undercut-summary">
+          <h4 className="undercut-summary-header">
+            <Award size={16} style={{ marginRight: '8px' }} />
+            Undercut Analysis
+          </h4>
+          <div className="undercut-summary-content">
+            {undercutSummary.map((pitstop, idx) => (
+              <div key={idx} className="undercut-summary-entry">
+                <div className="undercut-pitstop-header">
+                  <strong>{pitstop.car}</strong> - Lap {pitstop.lap} 
+                  ({pitstop.old_tyre} → {pitstop.new_tyre}, {pitstop.pit_time}s)
+                </div>
+                <div className="undercut-details">
+                  {pitstop.undercuts.map((undercut, uIdx) => (
+                    <div key={uIdx} className="undercut-item">
+                      <span className={`undercut-time ${undercut.time_gain > 0 ? 'gain' : 'loss'}`}>
+                        {undercut.time_gain > 0 ? '+' : ''}{undercut.time_gain.toFixed(2)}s
+                      </span>
+                      {' vs '}
+                      <strong>{undercut.vs}</strong>
+                      {undercut.position_change !== 0 && (
+                        <span className="undercut-position">
+                          {' '}(P{undercut.position_before} → P{undercut.position_after})
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

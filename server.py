@@ -56,7 +56,24 @@ TYRE_HEAT_FACTORS = {
     'WET': 0.9      # Less heat generation
 }
 
-PIT_TIME = 22.0
+PIT_TIME_BASE = 22.0  # Base pitstop time in seconds
+
+def get_pitstop_time():
+    """
+    Generate variable pitstop time with realistic variation.
+    Normal variation: ±1 second (using normal distribution, σ=0.5)
+    Bad cases: ±2 seconds (5-10% probability)
+    Based on real-world F1 data: average ~2.2s service time, but total pit lane time ~20-30s
+    """
+    # 5-10% chance of bad pitstop (±2 seconds)
+    if random.random() < 0.075:  # 7.5% chance
+        variation = random.uniform(-2.0, 2.0)
+    else:
+        # Normal variation: ±1 second using normal distribution
+        variation = np.random.normal(0.0, 0.5)
+        variation = max(-1.0, min(1.0, variation))  # Clamp to ±1 second
+    
+    return PIT_TIME_BASE + variation
 
 def load_gp_track_simple():
     """Simplified track for demo - Silverstone-like layout"""
@@ -187,8 +204,11 @@ class CarState:
         self.track_temp = 25.0
         
         # Pitstop history tracking
-        self.pitstop_history = []  # List of dicts: {'lap': int, 'tyre': str}
+        self.pitstop_history = []  # List of dicts: {'lap': int, 'tyre': str, 'undercuts': dict}
         self.pitstop_count = 0
+        # Track position and time gaps before pitstop for undercut calculation
+        self.position_before_pitstop = None
+        self.time_gaps_before_pitstop = {}  # Dict: {car_name: time_gap}
 
     def to_dict(self, track):
         u = track['s_to_u'](self.s)
@@ -227,8 +247,30 @@ class CarState:
             'pitstop_history': getattr(self, 'pitstop_history', []),
             'pitstop_count': getattr(self, 'pitstop_count', 0),
             'time_interval': round(getattr(self, 'time_interval', 0.0), 2),
-            'distance_interval': round(getattr(self, 'distance_interval', 0.0), 1)
+            'distance_interval': round(getattr(self, 'distance_interval', 0.0), 1),
+            'undercut_summary': self._get_undercut_summary()
         }
+    
+    def _get_undercut_summary(self):
+        """Get summary of undercuts for this car's pitstops"""
+        summary = []
+        for pitstop in getattr(self, 'pitstop_history', []):
+            if 'undercuts' in pitstop and pitstop['undercuts']:
+                # Find significant undercuts (>1 second gain or loss)
+                significant = []
+                for other_name, data in pitstop['undercuts'].items():
+                    if abs(data['time_gain']) > 1.0:
+                        significant.append({
+                            'vs': other_name,
+                            'time_gain': data['time_gain'],
+                            'position_change': data['position_change']
+                        })
+                if significant:
+                    summary.append({
+                        'lap': pitstop.get('lap', 0),
+                        'undercuts': significant
+                    })
+        return summary
 
 class RaceSim:
     def __init__(self, track_layout, n_cars=20, weather=None):
@@ -318,26 +360,115 @@ class RaceSim:
 
     def pitstop_probability(self, car):
         """
-        Calculate pitstop probability based on tyre wear.
-        Starts at 0% when wear = 0.8, increases linearly to 100% at wear = 1.0
-        Includes smart pitstop strategy to avoid simultaneous pitstops.
+        Calculate pitstop probability based on tyre wear and interval patterns.
+        Enhanced logic:
+        - Start considering pitstops at 80% wear (low probability ~10-20%)
+        - Increase probability significantly at 85% wear
+        - Allow stretching to 90% wear if gap behind (>3s) OR fast approaching car (<2s)
+        - Force pitstop at 90%+ wear regardless of conditions
+        - Analyze interval patterns to time pitstops ending in gaps
         """
         if car.wear < 0.8:
             return 0.0
         
+        # Get current leaderboard for interval analysis
+        sorted_cars = self.get_leaderboard()
+        car_position = next((i for i, c in enumerate(sorted_cars) if c == car), -1)
+        
+        # Calculate intervals to cars ahead and behind
+        gap_behind = None
+        gap_ahead = None
+        fast_approaching = False
+        
+        if car_position < len(sorted_cars) - 1:
+            car_behind = sorted_cars[car_position + 1]
+            track_length = self.track['total_length']
+            lap_diff_behind = car_behind.laps_completed - car.laps_completed
+            distance_gap_behind = (lap_diff_behind * track_length) + (car.s - car_behind.s)
+            if car.v > 0.1:
+                gap_behind = distance_gap_behind / car.v
+                # Check if car behind is fast approaching (closing gap quickly)
+                if gap_behind < 2.0 and gap_behind > 0:
+                    fast_approaching = True
+        
+        if car_position > 0:
+            car_ahead = sorted_cars[car_position - 1]
+            track_length = self.track['total_length']
+            lap_diff_ahead = car.laps_completed - car_ahead.laps_completed
+            distance_gap_ahead = (lap_diff_ahead * track_length) + (car_ahead.s - car.s)
+            if car.v > 0.1:
+                gap_ahead = distance_gap_ahead / car.v
+        
+        # Base probability based on wear
+        if car.wear < 0.85:
+            # 80-85%: Low probability (10-20%)
+            base_prob = 0.1 + 0.1 * ((car.wear - 0.8) / 0.05)
+        elif car.wear < 0.90:
+            # 85-90%: Moderate to high probability
+            base_prob = 0.2 + 0.6 * ((car.wear - 0.85) / 0.05)
+        else:
+            # 90%+: Force pitstop
+            base_prob = 1.0
+        
+        # Allow stretching to 90% if good conditions
+        if 0.8 <= car.wear < 0.90:
+            # Stretch if gap behind (>3 seconds) OR fast approaching car (<2 seconds)
+            if gap_behind and gap_behind > 3.0:
+                # Large gap behind - can stretch tires
+                base_prob *= 0.3  # Reduce probability significantly
+            elif fast_approaching:
+                # Fast approaching car - pit early to avoid being overtaken
+                base_prob *= 1.5  # Increase probability
+                base_prob = min(1.0, base_prob)
+        
+        # Interval pattern analysis: Check if pitstop would end in a gap
+        if car.wear >= 0.80:
+            # Estimate where car will rejoin after pitstop
+            estimated_pit_time = PIT_TIME_BASE + 1.0  # Use average + buffer
+            # Estimate track position after pitstop (car continues at current speed during pit)
+            estimated_rejoin_s = car.s  # Rejoin at same track position
+            estimated_rejoin_time = car.total_time + estimated_pit_time
+            
+            # Check if there's a gap opportunity (no car within 2-3 seconds)
+            gap_opportunity = False
+            for other_car in sorted_cars:
+                if other_car == car or other_car.on_pit:
+                    continue
+                
+                # Calculate where other car will be when this car rejoins
+                time_until_rejoin = estimated_rejoin_time - self.time
+                if time_until_rejoin > 0:
+                    # Estimate other car's position after time_until_rejoin
+                    other_car_future_s = other_car.s + other_car.v * time_until_rejoin
+                    track_length = self.track['total_length']
+                    
+                    # Normalize positions
+                    other_car_normalized = (other_car.laps_completed * track_length) + other_car_future_s
+                    car_normalized = (car.laps_completed * track_length) + estimated_rejoin_s
+                    
+                    # Calculate gap
+                    gap = abs(other_car_normalized - car_normalized)
+                    if car.v > 0.1:
+                        time_gap = gap / car.v
+                        # If gap is between 2-5 seconds, it's a good opportunity
+                        if 2.0 <= time_gap <= 5.0:
+                            gap_opportunity = True
+                            break
+            
+            # Increase probability if gap opportunity exists
+            if gap_opportunity and car.wear >= 0.85:
+                base_prob *= 1.3
+                base_prob = min(1.0, base_prob)
+        
         # Count how many cars are currently pitting
         cars_in_pit = sum(1 for c in self.cars if c.on_pit)
         
-        # Base probability: Linear increase from 0% at 0.8 to 100% at 1.0
-        base_prob = max(0.0, (car.wear - 0.8) / 0.2)
-        
         # Smart pitstop strategy: If 3+ cars are pitting, allow cars to stretch tires
-        if cars_in_pit >= 3 and 0.8 <= car.wear < 0.95:
-            # Reduce probability by 50% to allow stretching
+        if cars_in_pit >= 3 and 0.8 <= car.wear < 0.90:
             base_prob *= 0.5
         
-        # At critical wear (0.95+), always pit regardless of others
-        if car.wear >= 0.95:
+        # At critical wear (90%+), always pit regardless of others
+        if car.wear >= 0.90:
             base_prob = min(1.0, base_prob)
         
         return base_prob
@@ -371,10 +502,13 @@ class RaceSim:
                     # Update pitstop history with new tyre
                     if car.pitstop_history:
                         car.pitstop_history[-1]['new_tyre'] = car.tyre
+                    # Calculate undercuts for this pitstop
+                    self.calculate_undercuts(car)
                     car.wear = 0.0  # Reset wear for new tyres
                     # Reset tire temperature to slightly above ambient (new tyres start warm)
                     ambient_temp = self.weather.get('track_temp', 25.0)
                     car.tire_temp = ambient_temp + 10.0  # New tyres start 10°C above ambient
+                    car.position_before_pitstop = None  # Reset (already reset in calculate_undercuts)
                 continue
             
             u = self.track['s_to_u'](car.s)
@@ -435,13 +569,25 @@ class RaceSim:
             # Check for pitstop based on probability
             if not car.on_pit and random.random() < self.pitstop_probability(car) * self.dt:
                 car.on_pit = True
-                car.pit_counter = PIT_TIME
-                car.total_time += PIT_TIME
+                # Generate variable pitstop time
+                pit_time = get_pitstop_time()
+                car.pit_counter = pit_time
+                # Record position and time gaps before pitstop for undercut calculation
+                sorted_cars = self.get_leaderboard()
+                car.position_before_pitstop = car.position
+                car.time_gaps_before_pitstop = {}
+                for other_car in sorted_cars:
+                    if other_car != car:
+                        car.time_gaps_before_pitstop[other_car.name] = other_car.total_time - car.total_time
+                # Add pit time to total time
+                car.total_time += pit_time
                 # Record pitstop history
                 car.pitstop_count += 1
                 car.pitstop_history.append({
                     'lap': car.laps_completed,
-                    'tyre': car.tyre  # Current tyre before pitstop
+                    'tyre': car.tyre,  # Current tyre before pitstop
+                    'pit_time': round(pit_time, 2),
+                    'undercuts': {}  # Will be populated when pitstop completes
                 })
 
             if random.random() < self.error_probability(car) * self.dt:
@@ -495,7 +641,90 @@ class RaceSim:
         for i, c in enumerate(sorted_cars):
             c.position = i + 1
         return sorted_cars
+    
+    def calculate_undercuts(self, car):
+        """
+        Calculate undercut effects for a car that just completed a pitstop.
+        Compares position and time gaps before and after pitstop relative to all other cars.
+        """
+        if not car.pitstop_history or car.position_before_pitstop is None:
+            return
+        
+        # Get current leaderboard
+        sorted_cars = self.get_leaderboard()
+        current_position = car.position
+        
+        # Get the most recent pitstop entry
+        pitstop_entry = car.pitstop_history[-1]
+        
+        # Calculate undercuts relative to all other cars
+        undercuts = {}
+        
+        for other_car in sorted_cars:
+            if other_car == car:
+                continue
+            
+            # Get time gap before pitstop (stored when entering pit)
+            time_gap_before = car.time_gaps_before_pitstop.get(other_car.name, 0.0)
+            
+            # Calculate time gap after pitstop (current)
+            time_gap_after = other_car.total_time - car.total_time
+            
+            # Calculate position change
+            position_change = car.position_before_pitstop - current_position
+            
+            # Calculate undercut effect (positive = gained time, negative = lost time)
+            # If time_gap_after is more negative (or less positive) than before, we gained time
+            undercut_time = time_gap_before - time_gap_after
+            
+            # Store undercut data
+            undercuts[other_car.name] = {
+                'time_gain': round(undercut_time, 2),
+                'position_before': car.position_before_pitstop,
+                'position_after': current_position,
+                'position_change': position_change,
+                'other_position': other_car.position,
+                'time_gap_before': round(time_gap_before, 2),
+                'time_gap_after': round(time_gap_after, 2)
+            }
+        
+        # Update pitstop history with undercut data
+        pitstop_entry['undercuts'] = undercuts
+        
+        # Reset tracking variables
+        car.time_gaps_before_pitstop = {}
 
+    def get_undercut_summary(self):
+        """
+        Get comprehensive undercut summary for all cars at end of race.
+        Returns a list of all pitstops with their undercut effects.
+        """
+        summary = []
+        for car in self.cars:
+            for pitstop in car.pitstop_history:
+                if 'undercuts' in pitstop and pitstop['undercuts']:
+                    # Find significant undercuts (>1 second gain or loss)
+                    significant_undercuts = []
+                    for other_name, data in pitstop['undercuts'].items():
+                        if abs(data['time_gain']) > 1.0:
+                            significant_undercuts.append({
+                                'vs': other_name,
+                                'time_gain': data['time_gain'],
+                                'position_change': data['position_change'],
+                                'position_before': data['position_before'],
+                                'position_after': data['position_after']
+                            })
+                    if significant_undercuts:
+                        summary.append({
+                            'car': car.name,
+                            'lap': pitstop.get('lap', 0),
+                            'pit_time': pitstop.get('pit_time', 0),
+                            'old_tyre': pitstop.get('tyre', 'UNKNOWN'),
+                            'new_tyre': pitstop.get('new_tyre', 'UNKNOWN'),
+                            'undercuts': significant_undercuts
+                        })
+        return summary
+    
     def get_state(self):
         """Get complete race state for WebSocket broadcast"""
         sorted_cars = self.get_leaderboard()
@@ -516,7 +745,7 @@ class RaceSim:
         for c in self.cars:
             tyre_counts[c.tyre] = tyre_counts.get(c.tyre, 0) + 1
         
-        return {
+        state = {
             'time': round(self.time, 1),
             'cars': [car.to_dict(self.track) for car in self.cars],
             'weather': self.weather,
@@ -525,6 +754,12 @@ class RaceSim:
             'race_finished': self.race_finished,
             'race_started': self.race_started
         }
+        
+        # Add undercut summary at end of race
+        if self.race_finished:
+            state['undercut_summary'] = self.get_undercut_summary()
+        
+        return state
     
     def reset_race(self):
         """Reset the race for a new race"""
@@ -543,6 +778,8 @@ class RaceSim:
             car.pit_counter = 0.0
             car.pitstop_history = []
             car.pitstop_count = 0
+            car.position_before_pitstop = None
+            car.time_gaps_before_pitstop = {}
             car.tyre = random.choice(['SOFT', 'MEDIUM', 'HARD'])
             ambient_temp = self.weather.get('track_temp', 25.0)
             car.tire_temp = ambient_temp + 10.0
