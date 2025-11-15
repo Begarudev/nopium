@@ -36,7 +36,7 @@ function Track3D({ trackData, followCar, cars }) {
     
     // Create a flat ribbon geometry for the track using custom geometry
     const segments = 200; // Number of segments along the curve
-    const trackWidth = 12; // F1 track width in meters
+    const trackWidth = 15; // F1 track width in meters (12-15m is typical)
     
     const geometry = new THREE.BufferGeometry();
     const vertices = [];
@@ -115,7 +115,7 @@ function Track3D({ trackData, followCar, cars }) {
     
     // Inner and outer kerbs
     for (let side = 0; side < 2; side++) {
-      const offset = side === 0 ? -6.5 : 6.5; // Offset from track center
+      const offset = side === 0 ? -8.0 : 8.0; // Offset from track center (track is 15m wide)
       
       const geometry = new THREE.BufferGeometry();
       const vertices = [];

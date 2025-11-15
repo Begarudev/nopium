@@ -11,32 +11,82 @@ const carModels = [
   '/f1_2021_haas_vf21/scene.gltf'
 ];
 
-// Helper function to calculate track elevation at a given car position
-// This should match the elevation calculation in TrackView3D
-function calculateElevation(x, z, trackData) {
+// Helper function to calculate proper track position and elevation for cars
+// This uses interpolation along the track curve for smoother positioning
+function getTrackPositionAndElevation(carX, carZ, trackData) {
   if (!trackData || !trackData.points || trackData.points.length === 0) {
-    return 0.5; // Default elevation
+    return { x: carX, y: 0.5, z: carZ }; // Default position and elevation
   }
   
-  // Find the closest point on the track to interpolate elevation
   const points = trackData.points;
-  let minDist = Infinity;
-  let closestIndex = 0;
+  
+  // Find the two closest points to interpolate between
+  let minDist1 = Infinity;
+  let minDist2 = Infinity;
+  let closestIdx1 = 0;
+  let closestIdx2 = 0;
   
   for (let i = 0; i < points.length; i++) {
-    const dx = points[i][0] - x;
-    const dz = points[i][1] - z;
+    const dx = points[i][0] - carX;
+    const dz = points[i][1] - carZ;
     const dist = dx * dx + dz * dz;
-    if (dist < minDist) {
-      minDist = dist;
-      closestIndex = i;
+    
+    if (dist < minDist1) {
+      minDist2 = minDist1;
+      closestIdx2 = closestIdx1;
+      minDist1 = dist;
+      closestIdx1 = i;
+    } else if (dist < minDist2) {
+      minDist2 = dist;
+      closestIdx2 = i;
     }
   }
   
-  // Use the same elevation formula as in TrackView3D
-  const i = closestIndex;
-  const y = Math.abs(Math.sin(i * 0.1) * 2) + Math.abs(Math.cos(i * 0.05) * 1.5) + 0.5;
-  return y;
+  // Calculate elevation at both closest points
+  const getElevation = (idx) => {
+    return Math.abs(Math.sin(idx * 0.1) * 2) + Math.abs(Math.cos(idx * 0.05) * 1.5) + 0.5;
+  };
+  
+  const elev1 = getElevation(closestIdx1);
+  const elev2 = getElevation(closestIdx2);
+  
+  // Interpolate elevation based on distance weights
+  const dist1 = Math.sqrt(minDist1);
+  const dist2 = Math.sqrt(minDist2);
+  const totalDist = dist1 + dist2;
+  
+  let elevation;
+  if (totalDist > 0.001) {
+    // Weighted average based on inverse distance
+    const weight1 = dist2 / totalDist;
+    const weight2 = dist1 / totalDist;
+    elevation = elev1 * weight1 + elev2 * weight2;
+  } else {
+    elevation = elev1;
+  }
+  
+  // Track width is 15 meters in TrackView3D, with 7.5m on each side from centerline
+  // Allow a bit extra for racing line variations and spline interpolation differences
+  const trackHalfWidth = 10; // Slightly wider than actual track for tolerance
+  const distFromCenter = Math.sqrt(minDist1);
+  
+  if (distFromCenter > trackHalfWidth) {
+    // Car appears to be off-track, gently nudge it back toward track
+    // This helps with visual glitches from spline differences
+    const trackPoint = points[closestIdx1];
+    const dx = carX - trackPoint[0];
+    const dz = carZ - trackPoint[1];
+    const ratio = trackHalfWidth / distFromCenter;
+    
+    return {
+      x: trackPoint[0] + dx * ratio,
+      y: elevation,
+      z: trackPoint[1] + dz * ratio
+    };
+  }
+  
+  // Car is on track, use its position as-is with interpolated elevation
+  return { x: carX, y: elevation, z: carZ };
 }
 
 function Car3D({ car, isSelected, showLabel = false, trackData }) {
@@ -125,14 +175,14 @@ function Car3D({ car, isSelected, showLabel = false, trackData }) {
     // Store previous position before updating
     previousPosition.current.copy(targetPosition.current);
     
-    // Calculate elevation at car position to match track
-    const elevation = calculateElevation(car.x, car.y, trackData);
+    // Get proper track position and elevation for the car
+    const trackPos = getTrackPositionAndElevation(car.x, car.y, trackData);
     
     // Add offset to place car above the track surface (not inside it)
     const carHeightOffset = 0.8; // Half the height of a typical F1 car
     
     // Update target position (2D x,y -> 3D x,z with y as elevation)
-    targetPosition.current.set(car.x, elevation + carHeightOffset, car.y);
+    targetPosition.current.set(trackPos.x, trackPos.y + carHeightOffset, trackPos.z);
     
     // Calculate rotation based on actual movement direction in 3D
     // This ensures the car faces where it's actually moving
@@ -194,10 +244,10 @@ function Car3D({ car, isSelected, showLabel = false, trackData }) {
   
   // If model failed to load, show placeholder
   if (!clonedScene) {
-    const placeholderElevation = calculateElevation(car.x, car.y, trackData);
+    const trackPos = getTrackPositionAndElevation(car.x, car.y, trackData);
     const carHeightOffset = 0.8;
     return (
-      <group ref={groupRef} position={[car.x, placeholderElevation + carHeightOffset, car.y]}>
+      <group ref={groupRef} position={[trackPos.x, trackPos.y + carHeightOffset, trackPos.z]}>
         <mesh>
           <boxGeometry args={[5 * 2.5, 1.5 * 2.5, 2 * 2.5]} />
           <meshStandardMaterial color={car.color || '#ff0000'} />
