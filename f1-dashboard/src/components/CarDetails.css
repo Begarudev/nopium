@@ -1,29 +1,29 @@
 .car-details-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.95);
-  backdrop-filter: blur(5px);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
   z-index: 1000;
+  border-radius: 4px;
+}
+
+.car-details-modal-wrapper {
+  position: fixed;
+  z-index: 1001;
 }
 
 .car-details-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90%;
+  width: 98%;
   max-width: 800px;
-  max-height: 90vh;
+  max-height: 85vh;
   background: #000000;
   border: 2px solid #E10600;
   border-left: 6px solid #E10600;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9), 0 0 30px rgba(225, 6, 0, 0.4);
-  z-index: 1001;
   overflow-y: auto;
   padding: 0;
+  border-radius: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #E10600 rgba(0, 0, 0, 0.8);
 }
 
 .car-details-header {
@@ -352,4 +352,29 @@
   color: #666;
   font-style: italic;
 }
+
+/* Scrollbar styling */
+.car-details-modal::-webkit-scrollbar {
+  width: 10px;
+}
+
+.car-details-modal::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 5px;
+  border: 1px solid rgba(225, 6, 0, 0.2);
+}
+
+.car-details-modal::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #E10600 0%, #B80500 100%);
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 10px rgba(225, 6, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+.car-details-modal::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #FF1A0A 0%, #E10600 100%);
+  box-shadow: 0 0 15px rgba(225, 6, 0, 0.8);
+}
+
 

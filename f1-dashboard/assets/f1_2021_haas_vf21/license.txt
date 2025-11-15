@@ -1,0 +1,11 @@
+Model Information:
+* title:	F1 2021 HAAS VF21
+* source:	https://sketchfab.com/3d-models/f1-2021-haas-vf21-16b1d0e06022493682fa3e844cad2dce
+* author:	MattsActuallyUsefulModels (https://sketchfab.com/MattsActuallyUsefulModels)
+
+Model License:
+* license type:	CC-BY-NC-SA-4.0 (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+* requirements:	Author must be credited. No commercial use. Modified versions must have the same license.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "F1 2021 HAAS VF21" (https://sketchfab.com/3d-models/f1-2021-haas-vf21-16b1d0e06022493682fa3e844cad2dce) by MattsActuallyUsefulModels (https://sketchfab.com/MattsActuallyUsefulModels) licensed under CC-BY-NC-SA-4.0 (http://creativecommons.org/licenses/by-nc-sa/4.0/)

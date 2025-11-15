@@ -1,21 +1,56 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Gauge, Zap, Thermometer, Droplet } from 'lucide-react';
-import { checkeredFlag } from '../utils/animations';
 import './CarDetails.css';
 
-const CarDetails = ({ car, isOpen, onClose }) => {
+const CarDetails = ({ car, isOpen, onClose, containerRef }) => {
   const modalRef = useRef(null);
+  const [position, setPosition] = useState({ top: '50%', left: '50%' });
+  const [overlayStyle, setOverlayStyle] = useState({});
 
   useEffect(() => {
-    if (isOpen && modalRef.current) {
-      checkeredFlag(modalRef.current, {
-        duration: 800,
-        size: 15,
-        colors: ['#FFFFFF', '#000000']
-      });
+    const updatePosition = () => {
+      if (containerRef?.current && isOpen) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+        
+        // Calculate visible portion of the right column
+        const viewportTop = Math.max(0, rect.top);
+        const viewportBottom = Math.min(window.innerHeight, rect.bottom);
+        const visibleTop = Math.max(rect.top, 0);
+        const visibleHeight = Math.max(0, viewportBottom - viewportTop);
+        
+        // Center in the visible viewport of the right column
+        const centerX = rect.left + rect.width / 2 + scrollLeft;
+        const centerY = visibleTop + visibleHeight / 2 + scrollTop;
+        
+        setPosition({
+          top: `${centerY}px`,
+          left: `${centerX}px`
+        });
+
+        // Update overlay to cover only the right column visible area
+        setOverlayStyle({
+          top: `${visibleTop + scrollTop}px`,
+          left: `${rect.left + scrollLeft}px`,
+          width: `${rect.width}px`,
+          height: `${visibleHeight}px`,
+        });
+      }
+    };
+
+    if (isOpen) {
+      updatePosition();
+      window.addEventListener('resize', updatePosition);
+      window.addEventListener('scroll', updatePosition, true);
+      
+      return () => {
+        window.removeEventListener('resize', updatePosition);
+        window.removeEventListener('scroll', updatePosition, true);
+      };
     }
-  }, [isOpen]);
+  }, [isOpen, containerRef]);
 
   if (!car) return null;
 
@@ -29,15 +64,21 @@ const CarDetails = ({ car, isOpen, onClose }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
+            style={overlayStyle}
           />
           <motion.div
-            ref={modalRef}
-            className="car-details-modal"
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="car-details-modal-wrapper"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.3 }}
+            transformTemplate={({ scale }) => `translate(-50%, -50%) scale(${scale})`}
+            style={position}
           >
+            <div
+              ref={modalRef}
+              className="car-details-modal"
+            >
             <div className="car-details-header">
               <div className="car-details-title">
                 <div className="car-color-indicator" style={{ backgroundColor: car.color }}></div>
@@ -227,6 +268,7 @@ const CarDetails = ({ car, isOpen, onClose }) => {
                   )}
                 </div>
               </div>
+            </div>
             </div>
           </motion.div>
         </>

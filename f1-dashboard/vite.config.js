@@ -6,5 +6,6 @@ export default defineConfig({
   server: {
     port: 3015,
     open: true
-  }
+  },
+  publicDir: 'assets'
 })

@@ -1,0 +1,11 @@
+Model Information:
+* title:	F1 2021 AlphaTauri AT02
+* source:	https://sketchfab.com/3d-models/f1-2021-alphatauri-at02-2463b9f9c9b24e5f9d13daab0149b89b
+* author:	MattsActuallyUsefulModels (https://sketchfab.com/MattsActuallyUsefulModels)
+
+Model License:
+* license type:	CC-BY-NC-SA-4.0 (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+* requirements:	Author must be credited. No commercial use. Modified versions must have the same license.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "F1 2021 AlphaTauri AT02" (https://sketchfab.com/3d-models/f1-2021-alphatauri-at02-2463b9f9c9b24e5f9d13daab0149b89b) by MattsActuallyUsefulModels (https://sketchfab.com/MattsActuallyUsefulModels) licensed under CC-BY-NC-SA-4.0 (http://creativecommons.org/licenses/by-nc-sa/4.0/)

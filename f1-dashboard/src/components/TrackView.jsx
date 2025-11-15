@@ -1,7 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { ZoomIn, ZoomOut, Maximize2, Minimize2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ZoomIn, ZoomOut, Maximize2, Minimize2, Box, Square } from 'lucide-react';
 import { checkeredFlag, racingSpotlight, speedStreak, tireMarks } from '../utils/animations';
+import TrackView3D from './TrackView3D';
 import './TrackView.css';
 
 const TrackView = ({ trackData, cars = [], onCarClick }) => {
@@ -13,6 +14,7 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
   const [showLidar, setShowLidar] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [is3DView, setIs3DView] = useState(false);
   const carTrailsRef = useRef(new Map());
   const trackViewRef = useRef(null);
   const finishLineRef = useRef(null);
@@ -494,25 +496,55 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
       <div 
         ref={trackViewRef}
         className="track-view"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseDown={!is3DView ? handleMouseDown : undefined}
+        onMouseMove={!is3DView ? handleMouseMove : undefined}
+        onMouseUp={!is3DView ? handleMouseUp : undefined}
+        onMouseLeave={!is3DView ? handleMouseUp : undefined}
       >
         <div ref={finishLineRef} className="finish-line-overlay"></div>
-        <canvas 
-          ref={canvasRef} 
-          width={1200} 
-          height={800}
-          style={{ width: '100%', height: 'auto', cursor: isDragging ? 'grabbing' : 'grab' }}
-          onClick={(e) => {
-            // Simple click detection for cars (would need more sophisticated hit testing)
-            const rect = canvasRef.current.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            // This is simplified - would need proper hit testing
-          }}
-        />
+        
+        <AnimatePresence mode="wait">
+          {!is3DView ? (
+            <motion.div
+              key="2d-view"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.5 }}
+              style={{ width: '100%', height: '100%' }}
+            >
+              <canvas 
+                ref={canvasRef} 
+                width={1200} 
+                height={800}
+                style={{ width: '100%', height: 'auto', cursor: isDragging ? 'grabbing' : 'grab' }}
+                onClick={(e) => {
+                  // Simple click detection for cars (would need more sophisticated hit testing)
+                  const rect = canvasRef.current.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const y = e.clientY - rect.top;
+                  // This is simplified - would need proper hit testing
+                }}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="3d-view"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.5 }}
+              style={{ width: '100%', height: '800px' }}
+            >
+              <TrackView3D
+                trackData={trackData}
+                cars={interpolatedCars}
+                followCar={followCar}
+                onCarClick={handleCarClick}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
         
         {/* Controls */}
         <div className="track-controls">
@@ -555,6 +587,15 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
             title="Toggle LiDAR"
           >
             <Maximize2 size={20} />
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setIs3DView(!is3DView)}
+            className={`control-btn ${is3DView ? 'active' : ''}`}
+            title={is3DView ? "Switch to 2D View" : "Switch to 3D View"}
+          >
+            {is3DView ? <Square size={20} /> : <Box size={20} />}
           </motion.button>
         </div>
 

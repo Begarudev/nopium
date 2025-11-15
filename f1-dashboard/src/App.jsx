@@ -37,6 +37,7 @@ function App() {
   const appRef = useRef(null);
   const headerRef = useRef(null);
   const dashboardRef = useRef(null);
+  const rightColumnRef = useRef(null);
 
   // Page load animations
   useEffect(() => {
@@ -235,7 +236,7 @@ function App() {
           </div>
         </div>
 
-        <div className="right-column">
+        <div className="right-column" ref={rightColumnRef}>
           <div className="side-panel">
             <Leaderboard 
               cars={raceState.cars || []}
@@ -265,6 +266,7 @@ function App() {
         car={selectedCarData}
         isOpen={showCarDetails}
         onClose={() => setShowCarDetails(false)}
+        containerRef={rightColumnRef}
       />
 
       <footer className="app-footer">
