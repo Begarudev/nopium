@@ -158,6 +158,7 @@ DRIVER DATA:
         
         # Add driver summaries
         for driver in drivers:
+            undercut_battles = driver.get('undercut_battles', [])
             prompt += f"""
 {driver['name']} (P{driver['final_position']}):
 - Total Time: {driver['total_time']}s
@@ -165,6 +166,7 @@ DRIVER DATA:
 - Pit Stops: {driver['pitstop_count']}
 - Pit Strategy: {json.dumps(driver['pitstop_strategy'], indent=2)}
 - Tire Usage: {json.dumps(driver['tire_usage'], indent=2)}
+- Undercut Battles: {json.dumps(undercut_battles, indent=2)}
 - Fastest Lap: {driver['fastest_lap'].get('lap_time', 'N/A') if driver['fastest_lap'] else 'N/A'}s (Lap {driver['fastest_lap'].get('lap', 'N/A') if driver['fastest_lap'] else 'N/A'})
 - Sector Performance: Best S1={driver['sector_performance'].get('best_sector1', 'N/A')}, S2={driver['sector_performance'].get('best_sector2', 'N/A')}, S3={driver['sector_performance'].get('best_sector3', 'N/A')}
 - Position Changes: {len([e for e in driver['race_events'] if e.get('type') == 'overtake'])} overtakes
@@ -277,6 +279,22 @@ IMPORTANT:
 6. Consider undercut/overcut opportunities based on tire wear and track position
 7. Analyze sector performance to identify driving weaknesses
 8. Provide actionable recommendations with expected benefits
+
+UNDERCUT ANALYSIS REQUIREMENTS:
+- If driver successfully undercut someone (undercut_type='success' or positive time_gain):
+  * Praise the pit timing and tire compound choice
+  * Recommend similar strategy for future races
+  * Note the lap window that worked best
+- If driver got undercut (undercut_type='undercut' or negative time_gain):
+  * Suggest earlier pit timing to avoid being undercut
+  * Analyze what tire compound the opponent used
+  * Recommend defensive pit strategy
+- If driver defended successfully (undercut_type='defended'):
+  * Note good strategic awareness
+  * Praise timing that prevented undercut
+- If driver's undercut failed (undercut_type='failed'):
+  * Analyze why it didn't work (tire choice, timing, etc.)
+  * Suggest improvements for future attempts
 
 Generate insights for ALL drivers. Output ONLY valid JSON, no additional text.
 """
@@ -398,6 +416,7 @@ Driver Telemetry Features:
 - Pit Stop Count: {driver['pitstop_count']}
 - Pit Strategy Sequence: {json.dumps(driver['pitstop_strategy'], indent=2)}
 - Tire Compound Usage Distribution: {json.dumps(driver['tire_usage'], indent=2)}
+- Undercut Battles Analysis: {json.dumps(driver.get('undercut_battles', []), indent=2)}
 - Fastest Lap Time: {driver['fastest_lap'].get('lap_time', 'N/A') if driver['fastest_lap'] else 'N/A'}s (Lap {driver['fastest_lap'].get('lap', 'N/A') if driver['fastest_lap'] else 'N/A'})
 - Sector Performance Metrics: Best S1={driver['sector_performance'].get('best_sector1', 'N/A')}, S2={driver['sector_performance'].get('best_sector2', 'N/A')}, S3={driver['sector_performance'].get('best_sector3', 'N/A')}
 - Position Change Events: {len([e for e in driver['race_events'] if e.get('type') == 'overtake'])} overtakes
@@ -510,6 +529,266 @@ CRITICAL OUTPUT REQUIREMENTS:
 8. Anomaly detection should flag unusual patterns in the data
 9. All descriptions must be technical and analytical, not conversational
 10. Use ML model terminology throughout: "feature extraction", "pattern matching", "predictive modeling", "statistical inference"
+
+UNDERCUT ANALYSIS REQUIREMENTS:
+- Analyze undercut_battles data to identify strategic patterns:
+  * If driver successfully undercut (positive time_gain, undercut_type='success'):
+    - Correlate successful undercut with pit timing and tire compound transitions
+    - Recommend similar pit windows for future races
+    - Identify optimal tire compound sequences that enabled undercut
+  * If driver got undercut (negative time_gain, undercut_type='undercut'):
+    - Identify pit timing vulnerabilities
+    - Recommend earlier pit windows to prevent undercut
+    - Analyze opponent tire strategies that succeeded
+  * If driver defended (undercut_type='defended'):
+    - Recognize strategic awareness in pit timing
+    - Note effective defensive pit windows
+  * If undercut failed (undercut_type='failed'):
+    - Analyze failure factors (tire compound mismatch, timing errors, etc.)
+    - Provide data-driven recommendations for improvement
+- Include undercut performance in pit_strategy_analysis recommendations
+- Factor undercut outcomes into overall strategy_score
+
+Output ONLY valid JSON, no additional text or explanations.
+"""
+        
+        return prompt
+    
+    def generate_optimal_pit_strategy(self, race_data: Dict) -> Dict:
+        """
+        Generate optimal pit strategy recommendations based on race-wide undercut analysis.
+        Analyzes successful undercuts to identify best pit windows and tire compounds.
+        
+        Args:
+            race_data: Complete race data dictionary with race_summary and drivers
+            
+        Returns:
+            Dictionary with optimal pit strategy recommendations for 1-stop and 2-stop strategies
+        """
+        prompt = self._build_optimal_strategy_prompt(race_data)
+        
+        # Timeout handler
+        def timeout_handler(signum, frame):
+            raise TimeoutError(f"Gemini API call timed out after {API_TIMEOUT} seconds")
+        
+        try:
+            # Set up timeout
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(API_TIMEOUT)
+            
+            try:
+                print(f"[InsightsGenerator] Generating optimal pit strategy recommendations...")
+                response = self.model.generate_content(prompt)
+                signal.alarm(0)  # Cancel timeout
+                
+                if not response or not hasattr(response, 'text'):
+                    raise ValueError("Empty or invalid response from Gemini API")
+                
+                strategy_text = response.text
+                print(f"[InsightsGenerator] Received optimal strategy response ({len(strategy_text)} characters)")
+                
+                # Parse JSON from response (Gemini may include markdown formatting)
+                strategy_text = strategy_text.strip()
+                if strategy_text.startswith('```json'):
+                    strategy_text = strategy_text[7:]
+                if strategy_text.startswith('```'):
+                    strategy_text = strategy_text[3:]
+                if strategy_text.endswith('```'):
+                    strategy_text = strategy_text[:-3]
+                strategy_text = strategy_text.strip()
+                
+                strategy = json.loads(strategy_text)
+                print(f"[InsightsGenerator] Successfully parsed optimal pit strategy")
+                return strategy
+                
+            except TimeoutError:
+                signal.alarm(0)
+                error_msg = f"API call timed out after {API_TIMEOUT} seconds."
+                print(f"[InsightsGenerator] ERROR: {error_msg}")
+                return {
+                    'error': error_msg,
+                    'error_type': 'timeout',
+                    'one_stop_strategy': {},
+                    'two_stop_strategy': {},
+                    'key_insights': []
+                }
+            except json.JSONDecodeError as e:
+                signal.alarm(0)
+                error_msg = f"Failed to parse JSON response: {str(e)}"
+                print(f"[InsightsGenerator] ERROR: {error_msg}")
+                print(f"[InsightsGenerator] Response preview: {strategy_text[:500] if 'strategy_text' in locals() else 'N/A'}")
+                return {
+                    'error': error_msg,
+                    'error_type': 'json_parse_error',
+                    'response_preview': strategy_text[:500] if 'strategy_text' in locals() else None,
+                    'one_stop_strategy': {},
+                    'two_stop_strategy': {},
+                    'key_insights': []
+                }
+            except Exception as e:
+                signal.alarm(0)
+                error_msg = f"Error generating optimal strategy: {str(e)}"
+                print(f"[InsightsGenerator] ERROR: {error_msg}")
+                print(f"[InsightsGenerator] Error type: {type(e).__name__}")
+                return {
+                    'error': error_msg,
+                    'error_type': type(e).__name__,
+                    'one_stop_strategy': {},
+                    'two_stop_strategy': {},
+                    'key_insights': []
+                }
+                
+        except Exception as e:
+            signal.alarm(0)  # Ensure timeout is cancelled
+            error_msg = f"Unexpected error: {str(e)}"
+            print(f"[InsightsGenerator] FATAL ERROR: {error_msg}")
+            return {
+                'error': error_msg,
+                'error_type': 'unexpected_error',
+                'one_stop_strategy': {},
+                'two_stop_strategy': {},
+                'key_insights': []
+            }
+    
+    def _build_optimal_strategy_prompt(self, race_data: Dict) -> str:
+        """
+        Build prompt for optimal pit strategy analysis based on undercut data.
+        
+        Args:
+            race_data: Complete race data dictionary
+            
+        Returns:
+            Formatted prompt string
+        """
+        race_summary = race_data.get('race_summary', {})
+        drivers = race_data.get('drivers', [])
+        total_laps = race_summary.get('total_laps', 36)
+        
+        # Collect all undercut battles from all drivers
+        all_undercuts = []
+        successful_undercuts = []
+        
+        for driver in drivers:
+            undercut_battles = driver.get('undercut_battles', [])
+            for battle in undercut_battles:
+                all_undercuts.append({
+                    'driver': driver['name'],
+                    'lap': battle.get('lap', 0),
+                    'vs': battle.get('vs', ''),
+                    'time_gain': battle.get('time_gain', 0),
+                    'undercut_type': battle.get('undercut_type', ''),
+                    'tire_a': battle.get('tire_a', ''),
+                    'tire_b': battle.get('tire_b', ''),
+                    'position_change': battle.get('position_change', 0)
+                })
+                # Track successful undercuts (positive time gain)
+                if battle.get('time_gain', 0) > 0:
+                    successful_undercuts.append(battle)
+        
+        # Analyze successful undercut patterns
+        lap_distribution = {}
+        tire_transitions = {}
+        
+        for undercut in successful_undercuts:
+            lap = undercut.get('lap', 0)
+            tire_a = undercut.get('tire_a', '')
+            tire_b = undercut.get('tire_b', '')
+            time_gain = undercut.get('time_gain', 0)
+            
+            # Track lap distribution
+            if lap not in lap_distribution:
+                lap_distribution[lap] = {'count': 0, 'total_gain': 0}
+            lap_distribution[lap]['count'] += 1
+            lap_distribution[lap]['total_gain'] += time_gain
+            
+            # Track tire transitions
+            transition_key = f"{tire_a}→{tire_b}"
+            if transition_key not in tire_transitions:
+                tire_transitions[transition_key] = {'count': 0, 'total_gain': 0}
+            tire_transitions[transition_key]['count'] += 1
+            tire_transitions[transition_key]['total_gain'] += time_gain
+        
+        prompt = f"""You are an expert F1 race strategist analyzing race data to determine optimal pit stop windows and tire compound strategies.
+
+RACE CONTEXT:
+- Total Laps: {total_laps}
+- Race Duration: {race_summary.get('race_duration', 0)} seconds
+- Weather: Rain={race_summary.get('weather', {}).get('rain', 0):.2f}, Track Temp={race_summary.get('weather', {}).get('track_temp', 25):.1f}°C
+- Track Length: {race_summary.get('track_length', 0):.1f} meters
+
+UNDERCUT ANALYSIS DATA:
+Total Undercut Battles: {len(all_undercuts)}
+Successful Undercuts (positive time gain): {len(successful_undercuts)}
+
+Successful Undercut Details:
+{json.dumps(successful_undercuts[:20], indent=2)}  # Show first 20 for analysis
+
+Lap Distribution of Successful Undercuts:
+{json.dumps(lap_distribution, indent=2)}
+
+Tire Transition Analysis (from successful undercuts):
+{json.dumps(tire_transitions, indent=2)}
+
+ANALYSIS REQUIREMENTS:
+
+Based on the successful undercut data from this race, analyze and recommend optimal pit strategies:
+
+1. **1-Stop Strategy Analysis:**
+   - Identify the optimal pit window (lap range) where successful undercuts occurred most frequently
+   - Recommend tire compound sequence (starting compound → pit compound)
+   - Consider: Race is {total_laps} laps, so 1-stop means pitting around lap {total_laps // 2}-{total_laps // 2 + 5}
+   - Base recommendations on successful undercut patterns
+
+2. **2-Stop Strategy Analysis:**
+   - Identify optimal pit windows for two pit stops
+   - Recommend tire compound sequence (starting → first pit → second pit)
+   - Consider: 2-stop means pitting around laps 12-18 and 24-30 for a {total_laps}-lap race
+   - Base recommendations on successful undercut patterns
+
+3. **Key Insights:**
+   - Identify which lap ranges yielded the best undercut results
+   - Identify which tire compound transitions worked best
+   - Note any patterns in successful undercut strategies
+
+OUTPUT FORMAT (JSON only):
+
+{{
+  "one_stop_strategy": {{
+    "pit_window": [start_lap, end_lap],
+    "tire_sequence": ["STARTING_COMPOUND", "PIT_COMPOUND"],
+    "confidence": 0.0-1.0,
+    "reasoning": "Detailed explanation based on undercut analysis",
+    "average_time_gain": seconds,
+    "success_rate": 0.0-1.0
+  }},
+  "two_stop_strategy": {{
+    "pit_windows": [[first_start, first_end], [second_start, second_end]],
+    "tire_sequence": ["STARTING_COMPOUND", "FIRST_PIT_COMPOUND", "SECOND_PIT_COMPOUND"],
+    "confidence": 0.0-1.0,
+    "reasoning": "Detailed explanation based on undercut analysis",
+    "average_time_gain": seconds,
+    "success_rate": 0.0-1.0
+  }},
+  "key_insights": [
+    "Insight 1: Pitting on lap X-Y with compound Z yielded average +X.Xs gain",
+    "Insight 2: Tire transition A→B worked better than C→D",
+    "Insight 3: Additional strategic observation"
+  ],
+  "optimal_undercut_window": {{
+    "lap_range": [start_lap, end_lap],
+    "best_tire_transition": "COMPOUND_A→COMPOUND_B",
+    "average_time_gain": seconds,
+    "occurrence_count": number
+  }}
+}}
+
+CRITICAL REQUIREMENTS:
+1. Base ALL recommendations on actual successful undercut data from the race
+2. Pit windows should be realistic for a {total_laps}-lap race (1-stop: ~lap {total_laps // 2}-{total_laps // 2 + 5}, 2-stop: ~laps 12-18 and 24-30)
+3. Tire compounds must be one of: SOFT, MEDIUM, HARD, INTERMEDIATE, WET
+4. Confidence scores reflect how well the data supports the recommendation
+5. Reasoning must reference specific undercut patterns observed
+6. If insufficient undercut data, provide conservative recommendations with lower confidence
 
 Output ONLY valid JSON, no additional text or explanations.
 """

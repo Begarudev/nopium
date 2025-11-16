@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Award, TrendingUp, AlertCircle, CheckCircle, RotateCcw, ArrowLeft, Trophy, Zap, Loader2 } from 'lucide-react';
 import './RaceDashboard.css';
@@ -12,11 +12,35 @@ const RaceDashboard = ({
 }) => {
   const [generatingInsights, setGeneratingInsights] = useState({});
   const [mlInsights, setMlInsights] = useState({});
+  const [optimalStrategy, setOptimalStrategy] = useState(null);
+  const [loadingStrategy, setLoadingStrategy] = useState(true);
 
   // Sort insights by final position (P1, P2, etc.)
   const sortedInsights = Object.values(insights).sort((a, b) => {
     return (a.final_position || 999) - (b.final_position || 999);
   });
+
+  // Fetch optimal pit strategy on mount
+  useEffect(() => {
+    const fetchOptimalStrategy = async () => {
+      setLoadingStrategy(true);
+      try {
+        const response = await fetch('http://localhost:8000/api/optimal-pit-strategy');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.strategy) {
+            setOptimalStrategy(data.strategy);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching optimal strategy:', error);
+      } finally {
+        setLoadingStrategy(false);
+      }
+    };
+    
+    fetchOptimalStrategy();
+  }, []); // Run once on mount
 
   const handleGenerateDriverInsight = async (driverName) => {
     setGeneratingInsights(prev => ({ ...prev, [driverName]: true }));
@@ -94,6 +118,133 @@ const RaceDashboard = ({
       </div>
 
       <div className="race-dashboard-content">
+        {/* Optimal Pit Strategy Section */}
+        {optimalStrategy && !loadingStrategy && (
+          <motion.section
+            className="dashboard-section optimal-strategy-section"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="section-header">
+              <Zap size={24} />
+              <h2>Optimal Pit Strategy</h2>
+            </div>
+            
+            <div className="strategy-grid">
+              {/* 1-Stop Strategy Card */}
+              {optimalStrategy.one_stop_strategy && (
+                <div className="strategy-card">
+                  <div className="strategy-card-header">
+                    <span className="strategy-type">1-Stop Strategy</span>
+                    {optimalStrategy.one_stop_strategy.confidence !== undefined && (
+                      <span className="confidence-badge">
+                        {Math.round(optimalStrategy.one_stop_strategy.confidence * 100)}% Confidence
+                      </span>
+                    )}
+                  </div>
+                  <div className="strategy-card-body">
+                    {optimalStrategy.one_stop_strategy.pit_window && (
+                      <div className="pit-window">
+                        <label>Optimal Pit Window:</label>
+                        <span>Laps {optimalStrategy.one_stop_strategy.pit_window[0]} - {optimalStrategy.one_stop_strategy.pit_window[1]}</span>
+                      </div>
+                    )}
+                    {optimalStrategy.one_stop_strategy.tire_sequence && (
+                      <div className="tire-sequence">
+                        <label>Tire Strategy:</label>
+                        <div className="tire-badges">
+                          {optimalStrategy.one_stop_strategy.tire_sequence.map((tire, idx) => (
+                            <span key={idx} className={`tire-badge ${tire.toLowerCase()}`}>
+                              {tire}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {optimalStrategy.one_stop_strategy.reasoning && (
+                      <div className="strategy-reasoning">
+                        {optimalStrategy.one_stop_strategy.reasoning}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* 2-Stop Strategy Card */}
+              {optimalStrategy.two_stop_strategy && (
+                <div className="strategy-card">
+                  <div className="strategy-card-header">
+                    <span className="strategy-type">2-Stop Strategy</span>
+                    {optimalStrategy.two_stop_strategy.confidence !== undefined && (
+                      <span className="confidence-badge">
+                        {Math.round(optimalStrategy.two_stop_strategy.confidence * 100)}% Confidence
+                      </span>
+                    )}
+                  </div>
+                  <div className="strategy-card-body">
+                    {optimalStrategy.two_stop_strategy.pit_windows && optimalStrategy.two_stop_strategy.pit_windows.length > 0 && (
+                      <>
+                        <div className="pit-window">
+                          <label>Pit Window 1:</label>
+                          <span>Laps {optimalStrategy.two_stop_strategy.pit_windows[0][0]} - {optimalStrategy.two_stop_strategy.pit_windows[0][1]}</span>
+                        </div>
+                        {optimalStrategy.two_stop_strategy.pit_windows.length > 1 && (
+                          <div className="pit-window">
+                            <label>Pit Window 2:</label>
+                            <span>Laps {optimalStrategy.two_stop_strategy.pit_windows[1][0]} - {optimalStrategy.two_stop_strategy.pit_windows[1][1]}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {optimalStrategy.two_stop_strategy.tire_sequence && (
+                      <div className="tire-sequence">
+                        <label>Tire Strategy:</label>
+                        <div className="tire-badges">
+                          {optimalStrategy.two_stop_strategy.tire_sequence.map((tire, idx) => (
+                            <span key={idx} className={`tire-badge ${tire.toLowerCase()}`}>
+                              {tire}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {optimalStrategy.two_stop_strategy.reasoning && (
+                      <div className="strategy-reasoning">
+                        {optimalStrategy.two_stop_strategy.reasoning}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Key Insights */}
+            {optimalStrategy.key_insights && optimalStrategy.key_insights.length > 0 && (
+              <div className="strategy-insights">
+                <h3>Key Insights</h3>
+                <ul>
+                  {optimalStrategy.key_insights.map((insight, idx) => (
+                    <li key={idx}>{insight}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </motion.section>
+        )}
+
+        {/* Loading State */}
+        {loadingStrategy && (
+          <motion.section
+            className="dashboard-section loading-section"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <Loader2 className="spinner" size={24} />
+            <p>Analyzing optimal pit strategies...</p>
+          </motion.section>
+        )}
+
         {/* Undercut Analysis Section */}
         {undercutSummary && undercutSummary.length > 0 && (
           <motion.section

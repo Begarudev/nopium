@@ -207,9 +207,9 @@ class CarState:
         # Pitstop history tracking
         self.pitstop_history = []  # List of dicts: {'lap': int, 'tyre': str, 'undercuts': dict}
         self.pitstop_count = 0
-        # Track position and time gaps before pitstop for undercut calculation
+        # Track position before pitstop for undercut calculation
         self.position_before_pitstop = None
-        self.time_gaps_before_pitstop = {}  # Dict: {car_name: time_gap}
+        self.pitstop_lap = None  # Track the lap when current pitstop occurred
         
         # Driver error state tracking
         self.error_active = False
@@ -299,6 +299,8 @@ class RaceSim:
         self.paused = False  # Track pause state separately
         self.speed_multiplier = 1.0  # Simulation speed control
         self.race_events = []  # Track all race events for race log display
+        # Track pending undercut battles (only finalized when both drivers have pitted)
+        self.pending_undercuts = []  # List of dicts: {'driver_a': name, 'driver_b': name, 'a_pit_lap': lap, 'gap_before': seconds, 'tire_a': compound, 'tire_b': compound, 'a_position': int}
         self.init_cars(n_cars)
 
     def init_cars(self, n):
@@ -313,7 +315,7 @@ class RaceSim:
             ('Carlos Sainz', 0.89, 0.82, '#DC0000'),        # Ferrari
             ('Lewis Hamilton', 0.88, 0.87, '#006F62'),      # Mercedes
             ('Alexander Albon', 0.85, 0.82, '#0090FF'),     # Williams
-            ('Oliver Bearman', 0.84, 0.84, '#E10600'),      # Haas
+            ('Oliver Bearman', 0.84, 0.88, '#E10600'),      # Haas
             ('Isack Hadjar', 0.83, 0.82, '#66ccff'),        # RB
             ('Nico Hulkenberg', 0.82, 0.77, '#66ff66'),     # Sauber
             ('Kimi Antonelli', 0.81, 0.87, '#00665E'),      # Mercedes
@@ -429,9 +431,9 @@ class RaceSim:
         - Analyze interval patterns to time pitstops ending in gaps
         - Prevent pitstops when less than 3 laps remaining
         """
-        # Check if race is almost over - no pitstops if less than 3 laps remaining
+        # Check if race is almost over - no pitstops if 3 or fewer laps remaining
         laps_remaining = self.total_laps - car.laps_completed
-        if laps_remaining < 3:
+        if laps_remaining <= 3:
             return 0.0
         
         if car.wear < 0.8:
@@ -588,13 +590,14 @@ class RaceSim:
                     # Update pitstop history with new tyre
                     if car.pitstop_history:
                         car.pitstop_history[-1]['new_tyre'] = car.tyre
-                    # Calculate undercuts for this pitstop
-                    self.calculate_undercuts(car)
+                    # Finalize undercut battles where this driver is the second to pit
+                    self.finalize_undercut_battles(car)
                     car.wear = 0.0  # Reset wear for new tyres
                     # Reset tire temperature to slightly above ambient (new tyres start warm)
                     ambient_temp = self.weather.get('track_temp', 25.0)
                     car.tire_temp = max(80.0, ambient_temp + 55.0)  # New tyres start at realistic F1 temp
-                    car.position_before_pitstop = None  # Reset (already reset in calculate_undercuts)
+                    car.position_before_pitstop = None  # Reset tracking
+                    car.pitstop_lap = None  # Reset pitstop lap tracking
                 continue
             
             u = self.track['s_to_u'](car.s)
@@ -722,13 +725,12 @@ class RaceSim:
                 # Generate variable pitstop time
                 pit_time = get_pitstop_time()
                 car.pit_counter = pit_time
-                # Record position and time gaps before pitstop for undercut calculation
+                # Record position before pitstop
                 sorted_cars = self.get_leaderboard()
                 car.position_before_pitstop = car.position
-                car.time_gaps_before_pitstop = {}
-                for other_car in sorted_cars:
-                    if other_car != car:
-                        car.time_gaps_before_pitstop[other_car.name] = other_car.total_time - car.total_time
+                car.pitstop_lap = car.laps_completed
+                # Check for nearby drivers to create pending undercut battles
+                self.check_for_pending_undercuts(car)
                 # Add pit time to total time
                 car.total_time += pit_time
                 # Record pitstop history
@@ -737,7 +739,7 @@ class RaceSim:
                     'lap': car.laps_completed,
                     'tyre': car.tyre,  # Current tyre before pitstop
                     'pit_time': round(pit_time, 2),
-                    'undercuts': {}  # Will be populated when pitstop completes
+                    'undercuts': {}  # Will be populated when both drivers have pitted
                 })
 
             # Driver error handling: temporary speed reduction with varying severity
@@ -877,78 +879,285 @@ class RaceSim:
             c.position = i + 1
         return sorted_cars
     
-    def calculate_undercuts(self, car):
+    def check_for_pending_undercuts(self, car):
         """
-        Calculate undercut effects for a car that just completed a pitstop.
-        Compares position and time gaps before and after pitstop relative to all other cars.
+        Check for nearby drivers when a car enters the pits and create pending undercut entries.
+        F1 Expert Logic: Only tracks strategic undercut opportunities when:
+        - Drivers are racing closely (within 5 seconds, not 10)
+        - They're fighting for position (adjacent or within 2 positions)
+        - Both are on similar tire compounds/wear (strategic battle)
+        - The other driver hasn't pitted yet
         """
-        if not car.pitstop_history or car.position_before_pitstop is None:
-            return
-        
-        # Get current leaderboard
         sorted_cars = self.get_leaderboard()
-        current_position = car.position
+        current_lap = car.laps_completed
+        current_tire = car.tyre
         
-        # Get the most recent pitstop entry
-        pitstop_entry = car.pitstop_history[-1]
+        # Clean up any old pending undercuts where this car is driver_a (they're pitting again)
+        # Remove in reverse order to avoid index shifting
+        indices_to_remove = []
+        for i, pending in enumerate(self.pending_undercuts):
+            if pending['driver_a'] == car.name:
+                indices_to_remove.append(i)
+        for idx in reversed(indices_to_remove):
+            self.pending_undercuts.pop(idx)
         
-        # Calculate undercuts relative to all other cars
-        undercuts = {}
-        
+        # Check for strategic undercut opportunities (F1 expert criteria)
         for other_car in sorted_cars:
-            if other_car == car:
+            if other_car == car or other_car.on_pit:
                 continue
             
-            # Get time gap before pitstop (stored when entering pit)
-            time_gap_before = car.time_gaps_before_pitstop.get(other_car.name, 0.0)
+            # Calculate time gap to this other car
+            time_gap = other_car.total_time - car.total_time
             
-            # Calculate time gap after pitstop (current)
-            time_gap_after = other_car.total_time - car.total_time
+            # F1 Expert Criteria for undercut:
+            # 1. Racing closely (within 5 seconds - tighter than before)
+            # 2. Fighting for position (adjacent positions or within 2 positions)
+            # 3. Same lap (not lapped)
+            # 4. Similar tire compounds (strategic battle, not just random gap)
+            position_diff = abs(car.position - other_car.position)
+            is_adjacent = position_diff <= 2  # Adjacent or within 2 positions
             
-            # Calculate position change
-            position_change = car.position_before_pitstop - current_position
+            # Check if they're on similar tire compounds (both on same compound type)
+            tire_types_match = (current_tire == other_car.tyre) or \
+                              (current_tire in ['SOFT', 'MEDIUM', 'HARD'] and 
+                               other_car.tyre in ['SOFT', 'MEDIUM', 'HARD'])
             
-            # Calculate undercut effect (positive = gained time, negative = lost time)
-            # If time_gap_after is more negative (or less positive) than before, we gained time
-            undercut_time = time_gap_before - time_gap_after
-            
-            # Store undercut data
-            undercuts[other_car.name] = {
-                'time_gain': round(undercut_time, 2),
-                'position_before': car.position_before_pitstop,
-                'position_after': current_position,
-                'position_change': position_change,
-                'other_position': other_car.position,
-                'time_gap_before': round(time_gap_before, 2),
-                'time_gap_after': round(time_gap_after, 2)
-            }
+            # Only create pending undercut if:
+            # 1. They're racing closely (within 5 seconds - strategic window)
+            # 2. Fighting for position (adjacent or within 2 positions)
+            # 3. Same lap
+            # 4. Similar tire compounds (strategic battle)
+            if (abs(time_gap) <= 5.0 and 
+                abs(other_car.laps_completed - current_lap) == 0 and
+                is_adjacent and
+                tire_types_match):
+                
+                # Check if this battle already exists (avoid duplicates)
+                battle_exists = False
+                for pending in self.pending_undercuts:
+                    if (pending['driver_a'] == car.name and pending['driver_b'] == other_car.name) or \
+                       (pending['driver_a'] == other_car.name and pending['driver_b'] == car.name):
+                        battle_exists = True
+                        break
+                
+                if not battle_exists:
+                    # Create pending undercut entry
+                    # driver_a is the one pitting first (attempting undercut)
+                    self.pending_undercuts.append({
+                        'driver_a': car.name,
+                        'driver_b': other_car.name,
+                        'a_pit_lap': current_lap,
+                        'gap_before': round(time_gap, 2),  # Gap from A's perspective (B - A)
+                        'tire_a': current_tire,
+                        'tire_b': other_car.tyre,
+                        'a_position': car.position,
+                        'b_position': other_car.position
+                    })
+    
+    def finalize_undercut_battles(self, car):
+        """
+        Finalize undercut calculations when the second driver completes their pitstop.
+        Compares time gap after both have pitted vs. gap before first pitted.
+        Positive value = first driver (A) gained advantage, negative = second driver (B) gained advantage.
+        """
+        sorted_cars = self.get_leaderboard()
+        current_lap = car.laps_completed
+        current_tire = car.tyre
         
-        # Update pitstop history with undercut data
-        pitstop_entry['undercuts'] = undercuts
+        # Find all pending undercuts where this car is driver_b (second to pit)
+        battles_to_finalize = []
+        for i, pending in enumerate(self.pending_undercuts):
+            if pending['driver_b'] == car.name:
+                battles_to_finalize.append((i, pending))
         
-        # Reset tracking variables
-        car.time_gaps_before_pitstop = {}
+        # Process each battle (iterate in reverse to avoid index shifting when removing)
+        battles_to_finalize.reverse()
+        for idx, pending in battles_to_finalize:
+            driver_a_name = pending['driver_a']
+            driver_b_name = pending['driver_b']
+            
+            # Find the actual car objects
+            driver_a = next((c for c in sorted_cars if c.name == driver_a_name), None)
+            driver_b = next((c for c in sorted_cars if c.name == driver_b_name), None)
+            
+            if not driver_a or not driver_b:
+                # Remove invalid battle
+                self.pending_undercuts.pop(idx)
+                continue
+            
+            # Calculate time gap after both have pitted
+            # Gap from A's perspective: B.total_time - A.total_time
+            gap_after = driver_b.total_time - driver_a.total_time
+            gap_before = pending['gap_before']
+            
+            # Calculate undercut advantage
+            # Positive = A gained time (undercut successful)
+            # Negative = B gained time (defended/overcut successful)
+            undercut_time = gap_before - gap_after
+            
+            # F1 Expert Logic: Only record undercuts with meaningful strategic impact (>1 second)
+            # This ensures we only show actual strategic battles, not minor timing differences
+            if abs(undercut_time) < 1.0:
+                # Not significant enough - remove from pending without storing
+                self.pending_undercuts.pop(idx)
+                continue
+            
+            # Get tire compound advantage factor
+            tire_a = pending['tire_a']
+            tire_b = current_tire  # B's new tire after pitstop
+            
+            # Tire performance multipliers (from TYRE_BASE)
+            tire_perf_a = TYRE_BASE.get(tire_a, 0.90)
+            tire_perf_b = TYRE_BASE.get(tire_b, 0.90)
+            tire_factor = tire_perf_b - tire_perf_a  # Positive if B has better tires
+            
+            # Get current positions
+            position_a = driver_a.position
+            position_b = driver_b.position
+            
+            # Calculate position change for both drivers
+            position_change_a = pending['a_position'] - position_a
+            position_change_b = pending['b_position'] - position_b
+            
+            # F1 Expert Logic: Only store undercut from the strategic perspective
+            # If A successfully undercuts B (A gains time), show it for A as success
+            # If B gets undercut (A gains time), show it for B as failure
+            # We store for both but filter in get_undercut_summary to show appropriately
+            
+            # Store for Driver A (the one who attempted the undercut)
+            for pitstop in driver_a.pitstop_history:
+                if pitstop.get('lap') == pending['a_pit_lap']:
+                    if 'undercuts' not in pitstop:
+                        pitstop['undercuts'] = {}
+                    pitstop['undercuts'][driver_b_name] = {
+                        'time_gain': round(undercut_time, 2),  # From A's perspective
+                        'position_before': pending['a_position'],
+                        'position_after': position_a,
+                        'position_change': position_change_a,
+                        'other_position': position_b,
+                        'time_gap_before': round(gap_before, 2),
+                        'time_gap_after': round(gap_after, 2),
+                        'tire_a': tire_a,
+                        'tire_b': tire_b,
+                        'tire_factor': round(tire_factor, 3),
+                        'undercut_type': 'success' if undercut_time > 0 else 'failed'  # A's perspective
+                    }
+                    break
+            
+            # Store for Driver B (the one who got undercut or defended)
+            # Use the most recent pitstop entry (driver B just exited the pit)
+            if driver_b.pitstop_history:
+                pitstop = driver_b.pitstop_history[-1]
+                if 'undercuts' not in pitstop:
+                    pitstop['undercuts'] = {}
+                pitstop['undercuts'][driver_a_name] = {
+                    'time_gain': round(-undercut_time, 2),  # From B's perspective (inverted)
+                    'position_before': pending['b_position'],
+                    'position_after': position_b,
+                    'position_change': position_change_b,
+                    'other_position': position_a,
+                    'time_gap_before': round(-gap_before, 2),  # Inverted from B's perspective
+                    'time_gap_after': round(-gap_after, 2),  # Inverted from B's perspective
+                    'tire_a': tire_b,
+                    'tire_b': tire_a,
+                    'tire_factor': round(-tire_factor, 3),
+                    'undercut_type': 'undercut' if undercut_time > 0 else 'defended'  # B's perspective
+                }
+            
+            # Remove finalized battle from pending list
+            self.pending_undercuts.pop(idx)
 
     def get_undercut_summary(self):
         """
         Get comprehensive undercut summary for all cars at end of race.
-        Returns a list of all pitstops with their undercut effects.
+        F1 Expert Logic: Only shows meaningful strategic undercuts:
+        - Drivers were racing closely (within 5s before first pit)
+        - Significant strategic impact (>1s gain/loss)
+        - Shows from perspective of who gained (successful undercut) or lost (got undercut)
+        - Prevents showing same battle twice
         """
         summary = []
+        # Track which undercut battles we've already included (avoid duplicates)
+        # Key: tuple(sorted driver names), Value: which driver's perspective to show
+        included_battles = {}
+        
+        # First pass: collect all potential undercuts
+        potential_undercuts = []
         for car in self.cars:
             for pitstop in car.pitstop_history:
                 if 'undercuts' in pitstop and pitstop['undercuts']:
-                    # Find significant undercuts (>1 second gain or loss)
+                    for other_name, data in pitstop['undercuts'].items():
+                        gap_before = abs(data.get('time_gap_before', 999))
+                        time_gain = data.get('time_gain', 0)
+                        undercut_type = data.get('undercut_type', '')
+                        
+                        # Only consider meaningful strategic battles
+                        if gap_before <= 5.0 and abs(time_gain) > 1.0:
+                            battle_id = tuple(sorted([car.name, other_name]))
+                            potential_undercuts.append({
+                                'battle_id': battle_id,
+                                'driver': car.name,
+                                'other': other_name,
+                                'pitstop': pitstop,
+                                'data': data,
+                                'time_gain': time_gain,
+                                'undercut_type': undercut_type
+                            })
+        
+        # Second pass: decide which perspective to show (prefer showing from winner/loser perspective)
+        for undercut in potential_undercuts:
+            battle_id = undercut['battle_id']
+            
+            # If we haven't seen this battle, decide which perspective to show
+            if battle_id not in included_battles:
+                # Prefer showing from perspective of:
+                # 1. Driver who successfully undercut (positive time_gain)
+                # 2. Driver who got undercut (negative time_gain from their perspective)
+                # This ensures we show strategic outcomes, not just timing differences
+                
+                # Find both perspectives of this battle
+                perspectives = [u for u in potential_undercuts if u['battle_id'] == battle_id]
+                
+                # Choose the perspective with the most strategic meaning
+                # If someone successfully undercut (positive gain), show from their perspective
+                # If someone got undercut (negative gain), show from their perspective
+                best_perspective = None
+                for p in perspectives:
+                    if p['time_gain'] > 0:  # Successful undercut
+                        best_perspective = p
+                        break
+                    elif p['time_gain'] < 0:  # Got undercut
+                        if best_perspective is None or best_perspective['time_gain'] > p['time_gain']:
+                            best_perspective = p
+                
+                if best_perspective:
+                    included_battles[battle_id] = best_perspective['driver']
+        
+        # Third pass: build summary from chosen perspectives
+        for car in self.cars:
+            for pitstop in car.pitstop_history:
+                if 'undercuts' in pitstop and pitstop['undercuts']:
                     significant_undercuts = []
                     for other_name, data in pitstop['undercuts'].items():
-                        if abs(data['time_gain']) > 1.0:
-                            significant_undercuts.append({
-                                'vs': other_name,
-                                'time_gain': data['time_gain'],
-                                'position_change': data['position_change'],
-                                'position_before': data['position_before'],
-                                'position_after': data['position_after']
-                            })
+                        battle_id = tuple(sorted([car.name, other_name]))
+                        
+                        # Only include if this is the chosen perspective for this battle
+                        if battle_id in included_battles and included_battles[battle_id] == car.name:
+                            gap_before = abs(data.get('time_gap_before', 999))
+                            time_gain = data.get('time_gain', 0)
+                            
+                            if gap_before <= 5.0 and abs(time_gain) > 1.0:
+                                significant_undercuts.append({
+                                    'vs': other_name,
+                                    'time_gain': time_gain,
+                                    'position_change': data.get('position_change', 0),
+                                    'position_before': data.get('position_before', 0),
+                                    'position_after': data.get('position_after', 0),
+                                    'tire_a': data.get('tire_a', 'UNKNOWN'),
+                                    'tire_b': data.get('tire_b', 'UNKNOWN'),
+                                    'undercut_type': data.get('undercut_type', '')
+                                })
+                    
                     if significant_undercuts:
                         summary.append({
                             'car': car.name,
@@ -958,6 +1167,7 @@ class RaceSim:
                             'new_tyre': pitstop.get('new_tyre', 'UNKNOWN'),
                             'undercuts': significant_undercuts
                         })
+        
         return summary
     
     def get_race_insights(self):
@@ -1107,6 +1317,25 @@ class RaceSim:
             # No pitstops, all laps on starting tire
             tire_usage[car.tyre] = car.laps_completed
         
+        # Extract undercut battles from pitstop history
+        undercut_battles = []
+        for pitstop in car.pitstop_history:
+            if 'undercuts' in pitstop and pitstop['undercuts']:
+                for other_name, data in pitstop['undercuts'].items():
+                    undercut_battles.append({
+                        'lap': pitstop.get('lap', 0),
+                        'vs': other_name,
+                        'time_gain': data.get('time_gain', 0),
+                        'undercut_type': data.get('undercut_type', ''),
+                        'tire_a': data.get('tire_a', ''),
+                        'tire_b': data.get('tire_b', ''),
+                        'position_before': data.get('position_before', 0),
+                        'position_after': data.get('position_after', 0),
+                        'position_change': data.get('position_change', 0),
+                        'time_gap_before': data.get('time_gap_before', 0),
+                        'time_gap_after': data.get('time_gap_after', 0)
+                    })
+        
         return {
             'name': car.name,
             'final_position': car.position or 0,
@@ -1115,6 +1344,7 @@ class RaceSim:
             'pitstop_count': len(car.pitstop_history),
             'pitstop_strategy': pitstop_strategy,
             'tire_usage': tire_usage,
+            'undercut_battles': undercut_battles,
             'fastest_lap': {},  # Not tracked in current simulation
             'sector_performance': {},  # Not tracked in current simulation
             'race_events': []  # Not tracked per driver in current simulation
@@ -1195,7 +1425,7 @@ class RaceSim:
             car.pitstop_history = []
             car.pitstop_count = 0
             car.position_before_pitstop = None
-            car.time_gaps_before_pitstop = {}
+            car.pitstop_lap = None
             car.tyre = random.choice(['SOFT', 'MEDIUM', 'HARD'])
             ambient_temp = self.weather.get('track_temp', 25.0)
             car.tire_temp = max(80.0, ambient_temp + 55.0)  # Reset to realistic F1 tire temp
@@ -1516,6 +1746,66 @@ async def generate_driver_insight(driver_name: str):
             'insights': {},
             'success': False,
             'error': str(e)
+        }
+
+@app.get("/api/optimal-pit-strategy")
+async def get_optimal_pit_strategy():
+    """
+    Generate optimal pit strategy recommendations based on race undercut analysis.
+    Uses Gemini 2.5 Flash to analyze successful undercuts and recommend pit windows.
+    """
+    global sim
+    from fastapi import HTTPException
+    from insights_generator import InsightsGenerator
+    
+    if sim is None:
+        raise HTTPException(status_code=500, detail="Simulation not initialized")
+    
+    if not sim.race_finished:
+        raise HTTPException(status_code=400, detail="Race not finished yet")
+    
+    # Extract race data for all drivers
+    drivers_data = []
+    sorted_cars = sim.get_leaderboard()
+    winner = sorted_cars[0].name if sorted_cars else 'Unknown'
+    
+    for car in sorted_cars:
+        driver_data = sim._extract_driver_data_for_insights(car)
+        drivers_data.append(driver_data)
+    
+    race_summary = {
+        'total_laps': sim.total_laps,
+        'race_duration': sim.time,
+        'weather': sim.weather,
+        'track_length': sim.track['total_length'],
+        'winner': winner,
+        'fastest_lap_overall': 'N/A'  # Not tracked
+    }
+    
+    race_data = {
+        'race_summary': race_summary,
+        'drivers': drivers_data
+    }
+    
+    # Generate optimal pit strategy
+    try:
+        generator = InsightsGenerator()
+        strategy = generator.generate_optimal_pit_strategy(race_data)
+        
+        return {
+            'success': True,
+            'strategy': strategy
+        }
+    except Exception as e:
+        print(f"[API] Error generating optimal pit strategy: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e),
+            'strategy': {
+                'one_stop_strategy': {},
+                'two_stop_strategy': {},
+                'key_insights': []
+            }
         }
 
 @app.websocket("/ws")

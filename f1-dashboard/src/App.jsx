@@ -44,6 +44,8 @@ function App() {
   const headerRef = useRef(null);
   const dashboardRef = useRef(null);
   const rightColumnRef = useRef(null);
+  const audioRef = useRef(null);
+  const currentSongRef = useRef(null);
 
   // Page load animations
   useEffect(() => {
@@ -111,6 +113,68 @@ function App() {
   React.useEffect(() => {
     console.log('App State:', { isConnected, error, hasTrackData: !!trackData, hasCars: raceState.cars?.length });
   }, [isConnected, error, trackData, raceState.cars]);
+
+  // Music playback based on leaderboard position
+  useEffect(() => {
+    // Only play music when race is started and not finished
+    if (!raceStarted || raceState.race_finished || !raceState.cars || raceState.cars.length === 0) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      currentSongRef.current = null;
+      return;
+    }
+
+    // Find the first-ranked driver
+    const sortedCars = [...raceState.cars].sort((a, b) => (a.position || 0) - (b.position || 0));
+    const leader = sortedCars[0];
+    
+    if (!leader) return;
+
+    const isMaxFirst = leader.name === 'Max Verstappen';
+    const targetSong = isMaxFirst 
+      ? '/music/tu-tu-tu-du-max-verstappen.mp3'
+      : '/music/f1_theme_brian_tyler.mp3';
+
+    // Only switch songs if the target song has changed
+    if (currentSongRef.current === targetSong) {
+      // If audio is paused but should be playing, resume it
+      if (audioRef.current && audioRef.current.paused) {
+        audioRef.current.play().catch(err => {
+          console.error('Error playing audio:', err);
+        });
+      }
+      return;
+    }
+
+    // Stop current audio if playing
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    // Create new audio element
+    const audio = new Audio(targetSong);
+    audio.loop = true;
+    audio.volume = 0.5; // Set volume to 50%
+    
+    audioRef.current = audio;
+    currentSongRef.current = targetSong;
+
+    // Play the new song
+    audio.play().catch(err => {
+      console.error('Error playing audio:', err);
+    });
+
+    // Cleanup function
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, [raceState.cars, raceStarted, raceState.race_finished]);
 
   const handleWeatherChange = (newWeather) => {
     setSelectedWeather(newWeather);

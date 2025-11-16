@@ -423,6 +423,13 @@ class AdvancedDriving:
         Returns:
             Dict with 'should_pit', 'recommended_tyre'
         """
+        # Don't pit if 3 or fewer laps remaining
+        if race_laps_remaining <= 3:
+            return {
+                'should_pit': False,
+                'recommended_tyre': car.tyre
+            }
+        
         # Simple strategy: pit when tire wear > 70% or fuel < 20%
         should_pit = False
         recommended_tyre = car.tyre
