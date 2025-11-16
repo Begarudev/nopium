@@ -238,11 +238,11 @@ function CameraController({ followCar, cars, isFollowing, trackCenter }) {
     if (isFollowing && followCar && cars && cars.length > 0) {
       const car = cars.find(c => c.name === followCar);
       if (car && cameraRef.current && controlsRef.current) {
-        // Follow car from behind and above
+        // Follow car from above - elevated tracking camera
         // Map 2D coordinates: car.x -> 3D x, car.y -> 3D z
-        const offsetX = Math.cos(car.angle) * 30;
-        const offsetY = 25;
-        const offsetZ = Math.sin(car.angle) * 30;
+        const offsetX = Math.cos(car.angle) * 8; // Reduced horizontal offset for more top-down
+        const offsetY = 20; // Increased height for elevated view
+        const offsetZ = Math.sin(car.angle) * 8; // Reduced horizontal offset
         
         const targetX = car.x + offsetX;
         const targetY = offsetY;
@@ -274,7 +274,7 @@ function CameraController({ followCar, cars, isFollowing, trackCenter }) {
       <PerspectiveCamera
         ref={cameraRef}
         makeDefault
-        fov={50}
+        fov={50} // Reduced from 45 for even more zoomed-in view
       />
       <OrbitControls
         ref={controlsRef}
@@ -284,10 +284,10 @@ function CameraController({ followCar, cars, isFollowing, trackCenter }) {
         dampingFactor={0.08}
         rotateSpeed={0.5}
         zoomSpeed={0.8}
-        minDistance={40}
+        minDistance={15} // Reduced from 25 to allow getting much closer
         maxDistance={2500}
         maxPolarAngle={Math.PI / 2.05}
-        minPolarAngle={Math.PI / 8}
+        minPolarAngle={0} // Allow full top-down view (removed minimum angle)
         target={trackCenter ? [trackCenter[0], 0, trackCenter[1]] : [0, 0, 0]}
       />
     </>
@@ -326,25 +326,41 @@ const TrackView3D = ({ trackData, cars = [], followCar, onCarClick }) => {
     };
   }, [trackData]);
   
-  // Calculate camera distance based on track size
+  // Calculate camera distance based on track size - very close initial view
   const cameraDistance = useMemo(() => {
     const maxSize = Math.max(trackBounds.size[0], trackBounds.size[1]);
-    return Math.max(maxSize * 0.55, 150);
+    // Significantly reduced to start at zoomed-in position
+    return Math.max(maxSize * 0.12, 50);
   }, [trackBounds]);
   
-  // Better initial camera position - TV broadcast style angle
+  // Calculate the center of the car field (race pack)
+  const raceFieldCenter = useMemo(() => {
+    let targetX = trackBounds.center[0];
+    let targetZ = trackBounds.center[1];
+    
+    if (cars && cars.length > 0) {
+      // Calculate center of car positions
+      const carPositions = cars.filter(car => car && car.x !== undefined && car.y !== undefined);
+      if (carPositions.length > 0) {
+        targetX = carPositions.reduce((sum, car) => sum + car.x, 0) / carPositions.length;
+        targetZ = carPositions.reduce((sum, car) => sum + car.y, 0) / carPositions.length;
+      }
+    }
+    
+    return [targetX, targetZ];
+  }, [trackBounds, cars]);
+  
+  // Better initial camera position - directly above the race field center
   const initialCameraPosition = useMemo(() => {
-    // Position camera at a 35-45 degree angle for dramatic view
-    const horizontalDistance = cameraDistance * 0.7;
-    const height = cameraDistance * 0.35;
-    const angle = Math.PI / 4; // 45 degrees
+    // Position camera directly above the center with no horizontal offset
+    const height = cameraDistance * 1.2; // High above for bird's eye view
     
     return [
-      trackBounds.center[0] + Math.cos(angle) * horizontalDistance,
+      raceFieldCenter[0], // Directly at center X
       height,
-      trackBounds.center[1] + Math.sin(angle) * horizontalDistance
+      raceFieldCenter[1]  // Directly at center Z
     ];
-  }, [trackBounds, cameraDistance]);
+  }, [raceFieldCenter, cameraDistance]);
   
   return (
     <div className="track-view-3d">
@@ -371,9 +387,10 @@ const TrackView3D = ({ trackData, cars = [], followCar, onCarClick }) => {
         }}
         camera={{ 
           position: initialCameraPosition,
-          fov: 65,
+          fov:20, // Reduced from 45 for even more zoomed-in telephoto view
           near: 0.1,
-          far: 5000
+          far: 5000,
+
         }}
         style={{ width: '100%', height: '100%' }}
       >
@@ -416,7 +433,7 @@ const TrackView3D = ({ trackData, cars = [], followCar, onCarClick }) => {
           followCar={followCar} 
           cars={cars} 
           isFollowing={isFollowing}
-          trackCenter={trackBounds.center}
+          trackCenter={raceFieldCenter}
         />
         
         {/* Subtle grid helper */}
