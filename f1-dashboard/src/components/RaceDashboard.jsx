@@ -244,8 +244,37 @@ const RaceDashboard = ({
                   <div className="ml-insights-section">
                     <h4 className="insights-subheader">
                       <Zap size={16} />
-                      ML-Generated Insights
+                      ML Model Predictions
                     </h4>
+                    
+                    {mlInsights[driver.name].model_metadata && (
+                      <div className="ml-model-metadata">
+                        <div className="ml-metadata-row">
+                          <span className="ml-metadata-label">Model Confidence:</span>
+                          <span className="ml-metadata-value">
+                            {((mlInsights[driver.name].model_metadata.model_confidence || 0) * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="ml-metadata-row">
+                          <span className="ml-metadata-label">Data Quality:</span>
+                          <span className="ml-metadata-value">
+                            {((mlInsights[driver.name].model_metadata.data_quality_score || 0) * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="ml-metadata-row">
+                          <span className="ml-metadata-label">Prediction Accuracy:</span>
+                          <span className="ml-metadata-value">
+                            {((mlInsights[driver.name].model_metadata.prediction_accuracy || 0) * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                        {mlInsights[driver.name].model_metadata.anomaly_detected && (
+                          <div className="ml-anomaly-alert">
+                            <AlertCircle size={14} />
+                            <span>Anomaly Detected: {mlInsights[driver.name].model_metadata.anomaly_description || 'Unusual pattern detected'}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     
                     {mlInsights[driver.name].overall_assessment && (
                       <div className="ml-overall-assessment">
@@ -253,22 +282,61 @@ const RaceDashboard = ({
                           <div className="ml-score-item">
                             <span className="ml-score-label">Performance</span>
                             <span className="ml-score-value">
-                              {Math.round((mlInsights[driver.name].overall_assessment.performance_score || 0) * 100)}%
+                              {((mlInsights[driver.name].overall_assessment.performance_score || 0) * 100).toFixed(1)}%
                             </span>
+                            {mlInsights[driver.name].overall_assessment.confidence_intervals?.performance && (
+                              <span className="ml-confidence-interval">
+                                [{((mlInsights[driver.name].overall_assessment.confidence_intervals.performance[0] || 0) * 100).toFixed(1)}%, 
+                                {((mlInsights[driver.name].overall_assessment.confidence_intervals.performance[1] || 0) * 100).toFixed(1)}%]
+                              </span>
+                            )}
                           </div>
                           <div className="ml-score-item">
                             <span className="ml-score-label">Strategy</span>
                             <span className="ml-score-value">
-                              {Math.round((mlInsights[driver.name].overall_assessment.strategy_score || 0) * 100)}%
+                              {((mlInsights[driver.name].overall_assessment.strategy_score || 0) * 100).toFixed(1)}%
                             </span>
+                            {mlInsights[driver.name].overall_assessment.confidence_intervals?.strategy && (
+                              <span className="ml-confidence-interval">
+                                [{((mlInsights[driver.name].overall_assessment.confidence_intervals.strategy[0] || 0) * 100).toFixed(1)}%, 
+                                {((mlInsights[driver.name].overall_assessment.confidence_intervals.strategy[1] || 0) * 100).toFixed(1)}%]
+                              </span>
+                            )}
                           </div>
                           <div className="ml-score-item">
                             <span className="ml-score-label">Execution</span>
                             <span className="ml-score-value">
-                              {Math.round((mlInsights[driver.name].overall_assessment.execution_score || 0) * 100)}%
+                              {((mlInsights[driver.name].overall_assessment.execution_score || 0) * 100).toFixed(1)}%
                             </span>
+                            {mlInsights[driver.name].overall_assessment.confidence_intervals?.execution && (
+                              <span className="ml-confidence-interval">
+                                [{((mlInsights[driver.name].overall_assessment.confidence_intervals.execution[0] || 0) * 100).toFixed(1)}%, 
+                                {((mlInsights[driver.name].overall_assessment.confidence_intervals.execution[1] || 0) * 100).toFixed(1)}%]
+                              </span>
+                            )}
                           </div>
                         </div>
+                        
+                        {mlInsights[driver.name].overall_assessment.feature_importance_ranking && 
+                         mlInsights[driver.name].overall_assessment.feature_importance_ranking.length > 0 && (
+                          <div className="ml-feature-importance">
+                            <strong>Feature Importance:</strong>
+                            <div className="ml-feature-list">
+                              {mlInsights[driver.name].overall_assessment.feature_importance_ranking.map((feature, idx) => (
+                                <div key={idx} className="ml-feature-item">
+                                  <span className="ml-feature-name">{feature.feature.replace('_', ' ')}</span>
+                                  <div className="ml-feature-bar">
+                                    <div 
+                                      className="ml-feature-bar-fill" 
+                                      style={{ width: `${(feature.importance || 0) * 100}%` }}
+                                    />
+                                  </div>
+                                  <span className="ml-feature-value">{(feature.importance || 0).toFixed(3)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         
                         {mlInsights[driver.name].overall_assessment.key_strengths && 
                          mlInsights[driver.name].overall_assessment.key_strengths.length > 0 && (
@@ -298,19 +366,51 @@ const RaceDashboard = ({
                     
                     {mlInsights[driver.name].pit_strategy_analysis && (
                       <div className="ml-strategy-analysis">
-                        <strong>Pit Strategy:</strong>
+                        <strong>Pit Strategy Analysis:</strong>
                         <div className="ml-strategy-info">
-                          <span>Optimal: {mlInsights[driver.name].pit_strategy_analysis.optimal_strategy || 'N/A'}</span>
-                          <span>Efficiency: {Math.round((mlInsights[driver.name].pit_strategy_analysis.strategy_efficiency_score || 0) * 100)}%</span>
+                          <span>Model Prediction: {mlInsights[driver.name].pit_strategy_analysis.optimal_strategy || 'N/A'}</span>
+                          <span>Confidence: {((mlInsights[driver.name].pit_strategy_analysis.optimal_strategy_confidence || 0) * 100).toFixed(1)}%</span>
+                          <span>Efficiency Score: {((mlInsights[driver.name].pit_strategy_analysis.strategy_efficiency_score || 0) * 100).toFixed(1)}%</span>
+                          {mlInsights[driver.name].pit_strategy_analysis.statistical_significance !== undefined && (
+                            <span className="ml-stat-significance">
+                              p-value: {(mlInsights[driver.name].pit_strategy_analysis.statistical_significance || 0).toFixed(3)}
+                            </span>
+                          )}
                         </div>
+                        {mlInsights[driver.name].pit_strategy_analysis.confidence_interval && (
+                          <div className="ml-confidence-interval-display">
+                            Confidence Interval: [{((mlInsights[driver.name].pit_strategy_analysis.confidence_interval[0] || 0) * 100).toFixed(1)}%, 
+                            {((mlInsights[driver.name].pit_strategy_analysis.confidence_interval[1] || 0) * 100).toFixed(1)}%]
+                          </div>
+                        )}
+                        {mlInsights[driver.name].pit_strategy_analysis.feature_importance && (
+                          <div className="ml-feature-importance-inline">
+                            <strong>Feature Importance:</strong>
+                            <div className="ml-feature-tags">
+                              {Object.entries(mlInsights[driver.name].pit_strategy_analysis.feature_importance).map(([key, value]) => (
+                                <span key={key} className="ml-feature-tag">
+                                  {key.replace('_', ' ')}: {(value || 0).toFixed(2)}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         {mlInsights[driver.name].pit_strategy_analysis.missed_opportunities && 
                          mlInsights[driver.name].pit_strategy_analysis.missed_opportunities.length > 0 && (
                           <div className="ml-missed-opportunities">
-                            <strong>Missed Opportunities:</strong>
+                            <strong>Pattern-Detected Missed Opportunities:</strong>
                             <ul>
                               {mlInsights[driver.name].pit_strategy_analysis.missed_opportunities.map((opp, idx) => (
                                 <li key={idx}>
-                                  Lap {opp.lap}: {opp.description} ({opp.potential_benefit})
+                                  <span className="ml-opp-lap">Lap {opp.lap}</span>
+                                  <span className="ml-opp-type">[{opp.opportunity_type}]</span>
+                                  <span className="ml-opp-desc">{opp.description}</span>
+                                  {opp.predicted_time_gain && (
+                                    <span className="ml-opp-gain">Predicted Gain: {opp.predicted_time_gain.toFixed(2)}s</span>
+                                  )}
+                                  {opp.detection_confidence !== undefined && (
+                                    <span className="ml-opp-confidence">Confidence: {((opp.detection_confidence || 0) * 100).toFixed(1)}%</span>
+                                  )}
                                 </li>
                               ))}
                             </ul>
@@ -321,13 +421,29 @@ const RaceDashboard = ({
                     
                     {mlInsights[driver.name].tire_management && (
                       <div className="ml-tire-management">
-                        <strong>Tire Management:</strong>
+                        <strong>Tire Management Analysis:</strong>
                         <div className="ml-tire-info">
-                          <span>Usage Score: {Math.round((mlInsights[driver.name].tire_management.tire_usage_score || 0) * 100)}%</span>
+                          <span>Usage Score: {((mlInsights[driver.name].tire_management.tire_usage_score || 0) * 100).toFixed(1)}%</span>
+                          {mlInsights[driver.name].tire_management.confidence_interval && (
+                            <span className="ml-confidence-interval">
+                              CI: [{((mlInsights[driver.name].tire_management.confidence_interval[0] || 0) * 100).toFixed(1)}%, 
+                              {((mlInsights[driver.name].tire_management.confidence_interval[1] || 0) * 100).toFixed(1)}%]
+                            </span>
+                          )}
                           {mlInsights[driver.name].tire_management.optimal_compound_analysis && (
-                            <span>Recommended Start: {mlInsights[driver.name].tire_management.optimal_compound_analysis.recommended_starting_compound || 'N/A'}</span>
+                            <>
+                              <span>Model Prediction: {mlInsights[driver.name].tire_management.optimal_compound_analysis.recommended_starting_compound || 'N/A'}</span>
+                              {mlInsights[driver.name].tire_management.optimal_compound_analysis.prediction_confidence !== undefined && (
+                                <span>Confidence: {((mlInsights[driver.name].tire_management.optimal_compound_analysis.prediction_confidence || 0) * 100).toFixed(1)}%</span>
+                              )}
+                            </>
                           )}
                         </div>
+                        {mlInsights[driver.name].tire_management.tire_wear_analysis?.degradation_correlation !== undefined && (
+                          <div className="ml-degradation-correlation">
+                            Degradation Correlation: {(mlInsights[driver.name].tire_management.tire_wear_analysis.degradation_correlation || 0).toFixed(3)}
+                          </div>
+                        )}
                       </div>
                     )}
                     
@@ -335,11 +451,24 @@ const RaceDashboard = ({
                      mlInsights[driver.name].overall_assessment.top_3_recommendations && 
                      mlInsights[driver.name].overall_assessment.top_3_recommendations.length > 0 && (
                       <div className="ml-top-recommendations">
-                        <strong>Top Recommendations:</strong>
+                        <strong>Model-Predicted Optimizations:</strong>
                         <ul>
                           {mlInsights[driver.name].overall_assessment.top_3_recommendations.map((rec, idx) => (
                             <li key={idx}>
-                              <strong>#{rec.priority}:</strong> {rec.recommendation} ({rec.expected_benefit})
+                              <div className="ml-rec-header">
+                                <strong>#{rec.priority}</strong>
+                                <span className="ml-rec-category">[{rec.category}]</span>
+                                {rec.prediction_confidence !== undefined && (
+                                  <span className="ml-rec-confidence">Confidence: {((rec.prediction_confidence || 0) * 100).toFixed(1)}%</span>
+                                )}
+                                {rec.statistical_significance !== undefined && (
+                                  <span className="ml-rec-significance">p={rec.statistical_significance.toFixed(3)}</span>
+                                )}
+                              </div>
+                              <div className="ml-rec-content">
+                                <span className="ml-rec-text">{rec.recommendation}</span>
+                                <span className="ml-rec-benefit">Predicted Benefit: {rec.predicted_benefit || rec.expected_benefit}</span>
+                              </div>
                             </li>
                           ))}
                         </ul>
